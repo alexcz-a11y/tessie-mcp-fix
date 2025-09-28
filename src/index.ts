@@ -4,6 +4,8 @@ import { z } from "zod";
 import { TessieClient } from './tessie-client.js';
 import { TessieQueryOptimizer } from './query-optimizer.js';
 import { DriveAnalyzer } from './drive-analyzer.js';
+import { ChargingAnalyzer } from './charging-analyzer.js';
+import { TripCalculator } from './trip-calculator.js';
 
 // Configuration schema - automatically detected by Smithery
 export const configSchema = z.object({
@@ -34,6 +36,8 @@ export default function createServer({
     const tessieClient = new TessieClient(apiToken);
     const queryOptimizer = new TessieQueryOptimizer();
     const driveAnalyzer = new DriveAnalyzer();
+    const chargingAnalyzer = new ChargingAnalyzer();
+    const tripCalculator = new TripCalculator();
 
     // Register get_vehicle_current_state tool
     server.tool(
@@ -285,6 +289,253 @@ export default function createServer({
           };
         } catch (error) {
           throw new Error(`Failed to analyze latest drive: ${error}`);
+        }
+      }
+    );
+
+    // Register analyze_charging_costs tool
+    server.tool(
+      "analyze_charging_costs",
+      "Analyze charging sessions and costs from driving history, with recommendations to save money",
+      {
+        vin: z.string().describe("Vehicle identification number (VIN)"),
+        start_date: z.string().optional().describe("Start date in ISO format (YYYY-MM-DD)"),
+        end_date: z.string().optional().describe("End date in ISO format (YYYY-MM-DD)"),
+        home_rate: z.number().optional().describe("Your home electricity rate per kWh (default: $0.13)"),
+        peak_rate: z.number().optional().describe("Peak hour electricity rate per kWh (default: $0.32)"),
+        off_peak_rate: z.number().optional().describe("Off-peak electricity rate per kWh (default: $0.09)")
+      },
+      async ({ vin, start_date, end_date, home_rate, peak_rate, off_peak_rate }) => {
+        try {
+          // Get driving history to analyze charging sessions
+          const drives = await tessieClient.getDrives(vin, start_date, end_date, 500);
+
+          if (drives.length === 0) {
+            return {
+              error: 'No drives found in the specified period',
+              suggestion: 'Try a longer date range or check if the vehicle has been driven recently'
+            };
+          }
+
+          // Configure custom rates if provided
+          const customRates = home_rate || peak_rate || off_peak_rate ? {
+            home_rate_per_kwh: home_rate || 0.13,
+            time_of_use: {
+              off_peak: { hours: '23:00-07:00', rate: off_peak_rate || 0.09 },
+              peak: { hours: '16:00-21:00', rate: peak_rate || 0.32 }
+            }
+          } : undefined;
+
+          const analyzer = customRates ? new ChargingAnalyzer(customRates) : chargingAnalyzer;
+
+          // Learn home/work locations from patterns
+          analyzer.learnLocations(drives);
+
+          // Detect charging sessions
+          const sessions = analyzer.detectChargingSessions(drives);
+
+          // Analyze costs and patterns
+          const analysis = analyzer.analyzeChargingCosts(sessions);
+
+          // Format response
+          return {
+            period: {
+              start: start_date || 'Not specified',
+              end: end_date || 'Not specified',
+              days_analyzed: Math.ceil((drives[drives.length - 1].started_at - drives[0].started_at) / (60 * 60 * 24))
+            },
+            summary: {
+              total_sessions: analysis.total_sessions,
+              total_cost: `$${analysis.total_cost.toFixed(2)}`,
+              total_energy: `${analysis.total_kwh.toFixed(1)} kWh`,
+              total_miles_added: `${analysis.total_miles_added.toFixed(0)} miles`,
+              avg_cost_per_session: `$${analysis.average_cost_per_session.toFixed(2)}`,
+              avg_cost_per_kwh: `$${analysis.average_cost_per_kwh.toFixed(3)}/kWh`,
+              cost_per_mile: `$${analysis.average_cost_per_mile.toFixed(3)}/mile`
+            },
+            breakdown_by_location: {
+              home: {
+                sessions: analysis.sessions_by_location.home.sessions,
+                cost: `$${analysis.sessions_by_location.home.cost.toFixed(2)}`,
+                energy: `${analysis.sessions_by_location.home.kwh.toFixed(1)} kWh`,
+                percentage: analysis.total_cost > 0
+                  ? `${((analysis.sessions_by_location.home.cost / analysis.total_cost) * 100).toFixed(1)}%`
+                  : '0%'
+              },
+              supercharger: {
+                sessions: analysis.sessions_by_location.supercharger.sessions,
+                cost: `$${analysis.sessions_by_location.supercharger.cost.toFixed(2)}`,
+                energy: `${analysis.sessions_by_location.supercharger.kwh.toFixed(1)} kWh`,
+                percentage: analysis.total_cost > 0
+                  ? `${((analysis.sessions_by_location.supercharger.cost / analysis.total_cost) * 100).toFixed(1)}%`
+                  : '0%'
+              },
+              public: {
+                sessions: analysis.sessions_by_location.public.sessions,
+                cost: `$${analysis.sessions_by_location.public.cost.toFixed(2)}`,
+                energy: `${analysis.sessions_by_location.public.kwh.toFixed(1)} kWh`,
+                percentage: analysis.total_cost > 0
+                  ? `${((analysis.sessions_by_location.public.cost / analysis.total_cost) * 100).toFixed(1)}%`
+                  : '0%'
+              },
+              work: {
+                sessions: analysis.sessions_by_location.work.sessions,
+                cost: `$${analysis.sessions_by_location.work.cost.toFixed(2)}`,
+                energy: `${analysis.sessions_by_location.work.kwh.toFixed(1)} kWh`,
+                note: analysis.sessions_by_location.work.sessions > 0 ? 'Free workplace charging!' : 'No workplace charging detected'
+              }
+            },
+            money_saving_tips: analysis.recommendations,
+            potential_monthly_savings: `$${analysis.potential_savings.toFixed(2)}`,
+            detailed_sessions: sessions.slice(0, 10).map(s => ({
+              date: new Date(s.started_at * 1000).toLocaleDateString(),
+              time: new Date(s.started_at * 1000).toLocaleTimeString(),
+              location: s.location,
+              type: s.location_type,
+              battery_added: `${s.ending_battery - s.starting_battery}%`,
+              energy: `${s.energy_added_kwh.toFixed(1)} kWh`,
+              cost: `$${s.cost_estimate.toFixed(2)}`,
+              duration: `${Math.round(s.duration_minutes)} min`,
+              rate: s.charge_rate_kw ? `${s.charge_rate_kw} kW` : 'Unknown'
+            }))
+          };
+        } catch (error) {
+          throw new Error(`Failed to analyze charging costs: ${error}`);
+        }
+      }
+    );
+
+    // Register calculate_trip_cost tool
+    server.tool(
+      "calculate_trip_cost",
+      "Calculate the cost and environmental impact of completed trips with gas comparison and optimization tips",
+      {
+        vin: z.string().describe("Vehicle identification number (VIN)"),
+        start_date: z.string().optional().describe("Start date in ISO format (YYYY-MM-DD)"),
+        end_date: z.string().optional().describe("End date in ISO format (YYYY-MM-DD)"),
+        home_rate: z.number().optional().describe("Your home electricity rate per kWh (default: $0.13)"),
+        gas_price: z.number().optional().describe("Current gas price per gallon (default: $4.50)")
+      },
+      async ({ vin, start_date, end_date, home_rate, gas_price }) => {
+        try {
+          const drives = await tessieClient.getDrives(vin, start_date, end_date, 100);
+
+          if (drives.length === 0) {
+            return {
+              error: 'No drives found in the specified period',
+              suggestion: 'Try a longer date range or check if the vehicle has been driven recently'
+            };
+          }
+
+          const analysis = tripCalculator.calculateTripCost(
+            drives,
+            home_rate || 0.13,
+            0.28, // Supercharger rate
+            gas_price || 4.50
+          );
+
+          // Calculate gas comparison savings
+          const gasCost = analysis.comparison.vs_gas_vehicle.gas_cost_estimate;
+          const evCost = analysis.cost_breakdown.total_cost;
+          const savings = gasCost - evCost;
+          const savingsPercent = gasCost > 0 ? (savings / gasCost) * 100 : 0;
+
+          // Calculate optimal charging savings
+          const optimalCost = analysis.comparison.vs_optimal_charging.optimal_cost;
+          const optimalSavings = evCost - optimalCost;
+
+          return {
+            trip_overview: {
+              distance: `${analysis.trip_summary.distance_miles} miles`,
+              duration: `${analysis.trip_summary.duration_hours} hours`,
+              efficiency: `${analysis.trip_summary.efficiency_miles_per_kwh} mi/kWh`,
+              battery_used: `${analysis.trip_summary.battery_used_percent}%`,
+              energy_consumed: `${analysis.trip_summary.energy_used_kwh} kWh`
+            },
+            cost_analysis: {
+              total_cost: `$${analysis.cost_breakdown.total_cost.toFixed(2)}`,
+              cost_per_mile: `$${analysis.cost_breakdown.cost_per_mile.toFixed(3)}/mile`,
+              home_charging: `$${analysis.cost_breakdown.electricity_cost.toFixed(2)}`,
+              supercharger_stops: `$${analysis.cost_breakdown.charging_stops_cost.toFixed(2)}`
+            },
+            savings_vs_gas: {
+              gas_vehicle_cost: `$${gasCost.toFixed(2)}`,
+              your_ev_cost: `$${evCost.toFixed(2)}`,
+              money_saved: `$${savings.toFixed(2)}`,
+              savings_percentage: `${savingsPercent.toFixed(1)}%`,
+              note: savings > 0 ? '🎉 You saved money vs gas!' : '⚠️ Gas would have been cheaper'
+            },
+            optimization_opportunities: {
+              current_cost: `$${evCost.toFixed(2)}`,
+              optimal_cost: `$${optimalCost.toFixed(2)}`,
+              potential_savings: `$${optimalSavings.toFixed(2)}`,
+              efficiency_tips: analysis.charging_strategy
+            },
+            environmental_impact: {
+              co2_emissions_avoided: `${analysis.environmental_impact.co2_saved_lbs} lbs`,
+              trees_planted_equivalent: `${analysis.environmental_impact.trees_equivalent} trees`,
+              impact_note: analysis.environmental_impact.co2_saved_lbs > 0
+                ? '🌱 Your trip was carbon-friendly!'
+                : '⚠️ Grid emissions offset EV benefits'
+            }
+          };
+        } catch (error) {
+          throw new Error(`Failed to calculate trip cost: ${error}`);
+        }
+      }
+    );
+
+    // Register estimate_future_trip tool
+    server.tool(
+      "estimate_future_trip",
+      "Estimate cost and charging strategy for a planned trip based on distance and current battery level",
+      {
+        distance_miles: z.number().describe("Trip distance in miles"),
+        current_battery_percent: z.number().min(0).max(100).describe("Current battery percentage"),
+        home_rate: z.number().optional().describe("Your home electricity rate per kWh (default: $0.13)"),
+        supercharger_rate: z.number().optional().describe("Supercharger rate per kWh (default: $0.28)")
+      },
+      async ({ distance_miles, current_battery_percent, home_rate, supercharger_rate }) => {
+        try {
+          const estimate = tripCalculator.estimateFutureTripCost(
+            distance_miles,
+            current_battery_percent,
+            home_rate || 0.13,
+            supercharger_rate || 0.28
+          );
+
+          return {
+            trip_feasibility: {
+              distance: `${distance_miles} miles`,
+              current_charge: `${current_battery_percent}%`,
+              charging_required: estimate.charging_needed ? 'Yes' : 'No',
+              estimated_cost: `$${estimate.estimated_cost.toFixed(2)}`
+            },
+            charging_strategy: {
+              recommended_departure_charge: `${estimate.recommended_charge_level}%`,
+              supercharger_stops_needed: estimate.charging_stops_needed,
+              strategy_details: estimate.strategy
+            },
+            cost_breakdown: {
+              total_estimated_cost: `$${estimate.estimated_cost.toFixed(2)}`,
+              cost_per_mile: `$${(estimate.estimated_cost / distance_miles).toFixed(3)}/mile`
+            },
+            preparation_tips: estimate.charging_needed ? [
+              `🔌 Pre-charge to ${estimate.recommended_charge_level}% before departure`,
+              '🗺️ Plan Supercharger stops using Tesla navigation',
+              '📱 Check Supercharger availability along your route',
+              '⏰ Allow extra time for charging stops',
+              estimate.charging_stops_needed > 0
+                ? `🛑 Plan for ${estimate.charging_stops_needed} charging stop${estimate.charging_stops_needed > 1 ? 's' : ''}`
+                : ''
+            ].filter(Boolean) : [
+              '✅ No additional charging needed for this trip!',
+              '🎯 Your current charge is sufficient',
+              '📊 Monitor efficiency during the trip'
+            ]
+          };
+        } catch (error) {
+          throw new Error(`Failed to estimate future trip: ${error}`);
         }
       }
     );
