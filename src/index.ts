@@ -6,6 +6,7 @@ import { TessieQueryOptimizer } from './query-optimizer.js';
 import { DriveAnalyzer } from './drive-analyzer.js';
 import { ChargingAnalyzer } from './charging-analyzer.js';
 import { TripCalculator } from './trip-calculator.js';
+import { CommuteAnalyzer } from './commute-analyzer.js';
 
 // Configuration schema - automatically detected by Smithery
 export const configSchema = z.object({
@@ -38,6 +39,7 @@ export default function createServer({
     const driveAnalyzer = new DriveAnalyzer();
     const chargingAnalyzer = new ChargingAnalyzer();
     const tripCalculator = new TripCalculator();
+    const commuteAnalyzer = new CommuteAnalyzer();
 
     // Register get_vehicle_current_state tool
     server.tool(
@@ -536,6 +538,100 @@ export default function createServer({
           };
         } catch (error) {
           throw new Error(`Failed to estimate future trip: ${error}`);
+        }
+      }
+    );
+
+    // Register analyze_commute_patterns tool
+    server.tool(
+      "analyze_commute_patterns",
+      "Detect regular commute routes and analyze efficiency trends, time patterns, and costs",
+      {
+        vin: z.string().describe("Vehicle identification number (VIN)"),
+        days_back: z.number().optional().default(30).describe("Number of days to analyze (default: 30)")
+      },
+      async ({ vin, days_back = 30 }) => {
+        try {
+          // Get driving history for pattern analysis
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - days_back);
+
+          const drives = await tessieClient.getDrives(
+            vin,
+            startDate.toISOString(),
+            endDate.toISOString(),
+            500
+          );
+
+          if (drives.length < 10) {
+            return {
+              error: 'Not enough driving data to detect commute patterns',
+              drives_found: drives.length,
+              suggestion: 'Try increasing days_back parameter or drive more regularly to establish patterns'
+            };
+          }
+
+          const analysis = commuteAnalyzer.analyzeCommutes(drives);
+
+          return {
+            analysis_period: {
+              days_analyzed: days_back,
+              drives_analyzed: drives.length,
+              start_date: startDate.toISOString().split('T')[0],
+              end_date: endDate.toISOString().split('T')[0]
+            },
+            commute_overview: {
+              routes_detected: analysis.routes_detected,
+              total_weekly_commute_miles: analysis.total_commute_miles,
+              estimated_weekly_cost: `$${analysis.total_commute_cost.toFixed(2)}`,
+              avg_commute_efficiency: `${analysis.avg_commute_efficiency} kWh/100mi`
+            },
+            regular_routes: analysis.routes.map(route => ({
+              route_name: route.name,
+              frequency: `${route.frequency.toFixed(1)} times/week`,
+              typical_distance: `${route.typical_distance} miles`,
+              avg_duration: `${Math.round(route.avg_duration_minutes)} minutes`,
+              efficiency: `${route.avg_efficiency_kwh_per_100mi.toFixed(1)} kWh/100mi`,
+              trend: route.recent_trend,
+              trend_emoji: route.recent_trend === 'improving' ? '📈' :
+                          route.recent_trend === 'declining' ? '📉' : '➡️',
+              commute_times: {
+                morning_rush: route.time_patterns.morning_commute.count > 0
+                  ? `${route.time_patterns.morning_commute.count} drives, avg ${route.time_patterns.morning_commute.avg_time}`
+                  : 'No morning commutes detected',
+                evening_rush: route.time_patterns.evening_commute.count > 0
+                  ? `${route.time_patterns.evening_commute.count} drives, avg ${route.time_patterns.evening_commute.avg_time}`
+                  : 'No evening commutes detected',
+                weekend: route.time_patterns.weekend.count > 0
+                  ? `${route.time_patterns.weekend.count} drives, avg ${route.time_patterns.weekend.avg_time}`
+                  : 'No weekend drives'
+              },
+              efficiency_range: {
+                best: `${route.best_efficiency.toFixed(1)} kWh/100mi`,
+                worst: `${route.worst_efficiency.toFixed(1)} kWh/100mi`,
+                variation: `${((route.worst_efficiency - route.best_efficiency) / route.best_efficiency * 100).toFixed(1)}%`
+              }
+            })),
+            weekly_patterns: {
+              total_drives: analysis.weekly_summary.total_drives,
+              total_miles: `${analysis.weekly_summary.total_miles} miles`,
+              estimated_cost: `$${analysis.weekly_summary.total_cost.toFixed(2)}`,
+              avg_efficiency: `${analysis.weekly_summary.avg_efficiency} kWh/100mi`,
+              most_efficient_day: analysis.weekly_summary.best_day,
+              least_efficient_day: analysis.weekly_summary.worst_day
+            },
+            optimization_tips: analysis.recommendations,
+            cost_insights: analysis.routes.length > 0 ? [
+              `💰 Your regular commutes cost approximately $${analysis.total_commute_cost.toFixed(2)}/week`,
+              `⚡ At current efficiency, you use ~${(analysis.total_commute_miles * analysis.avg_commute_efficiency / 100).toFixed(1)} kWh/week for commuting`,
+              analysis.avg_commute_efficiency > 25
+                ? `🚨 High commute energy usage - consider eco-driving techniques`
+                : `✅ Good commute efficiency - you're driving efficiently!`
+            ] : ['No regular commute patterns detected']
+          };
+        } catch (error) {
+          throw new Error(`Failed to analyze commute patterns: ${error}`);
         }
       }
     );
