@@ -7,6 +7,7 @@ import { DriveAnalyzer } from './drive-analyzer.js';
 import { ChargingAnalyzer } from './charging-analyzer.js';
 import { TripCalculator } from './trip-calculator.js';
 import { CommuteAnalyzer } from './commute-analyzer.js';
+import { EfficiencyAnalyzer } from './efficiency-analyzer.js';
 import { GeocodingService } from './geocoding.js';
 
 // Configuration schema - automatically detected by Smithery
@@ -41,6 +42,7 @@ export default function createServer({
     const chargingAnalyzer = new ChargingAnalyzer();
     const tripCalculator = new TripCalculator();
     const commuteAnalyzer = new CommuteAnalyzer();
+    const efficiencyAnalyzer = new EfficiencyAnalyzer();
 
     // Register get_vehicle_current_state tool
     server.tool(
@@ -649,6 +651,140 @@ export default function createServer({
           };
         } catch (error) {
           throw new Error(`Failed to analyze commute patterns: ${error}`);
+        }
+      }
+    );
+
+    // Register analyze_efficiency_trends tool
+    server.tool(
+      "analyze_efficiency_trends",
+      "Analyze driving efficiency trends over time with weather, speed, and time pattern insights",
+      {
+        vin: z.string().describe("Vehicle identification number (VIN)"),
+        days_back: z.number().optional().default(45).describe("Number of days to analyze (default: 45, minimum: 14)")
+      },
+      async ({ vin, days_back = 45 }) => {
+        try {
+          if (days_back < 14) {
+            return {
+              error: "Minimum 14 days required for meaningful trend analysis",
+              suggestion: "Try days_back >= 14 for better insights"
+            };
+          }
+
+          // Get driving history for efficiency analysis
+          const endDate = new Date();
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - days_back);
+
+          const drives = await tessieClient.getDrives(
+            vin,
+            startDate.toISOString(),
+            endDate.toISOString(),
+            200
+          );
+
+          if (drives.length < 5) {
+            return {
+              error: "Insufficient driving data for trend analysis",
+              drives_found: drives.length,
+              suggestion: 'Need at least 5 drives for efficiency analysis'
+            };
+          }
+
+          const analysis = efficiencyAnalyzer.analyzeEfficiencyTrends(drives);
+
+          return {
+            analysis_period: {
+              days_analyzed: days_back,
+              drives_analyzed: drives.length,
+              start_date: startDate.toISOString().split('T')[0],
+              end_date: endDate.toISOString().split('T')[0]
+            },
+            current_efficiency: {
+              average: `${analysis.current_period.avg_efficiency} kWh/100mi`,
+              total_miles: `${analysis.current_period.total_miles} miles`,
+              total_drives: analysis.current_period.total_drives,
+              efficiency_range: {
+                best: `${analysis.current_period.efficiency_range.best} kWh/100mi`,
+                worst: `${analysis.current_period.efficiency_range.worst} kWh/100mi`,
+                spread: `${(analysis.current_period.efficiency_range.worst - analysis.current_period.efficiency_range.best).toFixed(1)} kWh/100mi variation`
+              }
+            },
+            trends: {
+              weekly: {
+                direction: analysis.trends.weekly.trend_direction,
+                change: `${analysis.trends.weekly.trend_percentage.toFixed(1)}%`,
+                confidence: analysis.trends.weekly.confidence,
+                emoji: analysis.trends.weekly.trend_direction === 'improving' ? '📈' :
+                       analysis.trends.weekly.trend_direction === 'declining' ? '📉' : '➡️',
+                summary: analysis.trends.weekly.trend_direction === 'stable'
+                  ? `Stable efficiency at ${analysis.trends.weekly.avg_efficiency} kWh/100mi`
+                  : `${analysis.trends.weekly.trend_direction === 'improving' ? 'Improving' : 'Declining'} by ${analysis.trends.weekly.trend_percentage.toFixed(1)}% - current avg: ${analysis.trends.weekly.avg_efficiency} kWh/100mi`
+              },
+              monthly: {
+                direction: analysis.trends.monthly.trend_direction,
+                change: `${analysis.trends.monthly.trend_percentage.toFixed(1)}%`,
+                confidence: analysis.trends.monthly.confidence,
+                summary: analysis.trends.monthly.confidence !== 'low'
+                  ? `Monthly trend: ${analysis.trends.monthly.trend_direction} (${analysis.trends.monthly.trend_percentage.toFixed(1)}%)`
+                  : 'Insufficient data for monthly trend'
+              },
+              seasonal: {
+                direction: analysis.trends.seasonal.trend_direction,
+                change: `${analysis.trends.seasonal.trend_percentage.toFixed(1)}%`,
+                confidence: analysis.trends.seasonal.confidence,
+                summary: analysis.trends.seasonal.confidence !== 'low'
+                  ? `Seasonal trend: ${analysis.trends.seasonal.trend_direction} (${analysis.trends.seasonal.trend_percentage.toFixed(1)}%)`
+                  : 'Need more data for seasonal analysis'
+              }
+            },
+            efficiency_factors: {
+              weather_impact: {
+                hot_weather_penalty: `+${analysis.factors_analysis.weather_impact.hot_weather_penalty.toFixed(1)}%`,
+                cold_weather_penalty: `+${analysis.factors_analysis.weather_impact.cold_weather_penalty.toFixed(1)}%`,
+                optimal_temp_range: analysis.factors_analysis.weather_impact.optimal_temp_range,
+                insight: analysis.factors_analysis.weather_impact.cold_weather_penalty > 15
+                  ? "❄️ Cold weather significantly impacting efficiency"
+                  : analysis.factors_analysis.weather_impact.hot_weather_penalty > 10
+                  ? "🔥 Hot weather and A/C affecting efficiency"
+                  : "🌡️ Weather impact is minimal"
+              },
+              speed_impact: {
+                highway_efficiency: `${analysis.factors_analysis.speed_impact.highway_efficiency} kWh/100mi`,
+                city_efficiency: `${analysis.factors_analysis.speed_impact.city_efficiency} kWh/100mi`,
+                optimal_speed_range: analysis.factors_analysis.speed_impact.optimal_speed_range,
+                preference: analysis.factors_analysis.speed_impact.highway_efficiency < analysis.factors_analysis.speed_impact.city_efficiency
+                  ? "🛣️ Highway driving is more efficient"
+                  : "🏙️ City driving is more efficient"
+              },
+              time_patterns: {
+                best_day: analysis.factors_analysis.time_patterns.best_day_of_week,
+                worst_day: analysis.factors_analysis.time_patterns.worst_day_of_week,
+                best_time: analysis.factors_analysis.time_patterns.best_time_of_day,
+                scheduling_tip: analysis.factors_analysis.time_patterns.best_day_of_week !== 'Unknown'
+                  ? `📅 Schedule trips on ${analysis.factors_analysis.time_patterns.best_day_of_week}s for best efficiency`
+                  : "📅 No clear daily efficiency patterns detected"
+              }
+            },
+            actionable_insights: analysis.insights,
+            optimization_recommendations: analysis.recommendations,
+            efficiency_score: {
+              current: analysis.current_period.avg_efficiency < 25 ? "Excellent" :
+                      analysis.current_period.avg_efficiency < 30 ? "Good" :
+                      analysis.current_period.avg_efficiency < 35 ? "Average" : "Needs Improvement",
+              benchmark: "Model 3/Y typical: 25-30 kWh/100mi",
+              comparison: analysis.current_period.avg_efficiency < 25
+                ? "🏆 You're driving very efficiently!"
+                : analysis.current_period.avg_efficiency < 30
+                ? "✅ Good efficiency - room for minor improvements"
+                : analysis.current_period.avg_efficiency < 35
+                ? "⚠️ Average efficiency - focus on eco-driving techniques"
+                : "🚨 High consumption - review driving habits and vehicle maintenance"
+            }
+          };
+        } catch (error) {
+          throw new Error(`Failed to analyze efficiency trends: ${error}`);
         }
       }
     );
