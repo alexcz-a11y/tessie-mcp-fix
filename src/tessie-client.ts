@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import { ErrorHandler, EnhancedError } from './error-handler.js';
 
 export interface TessieVehicleState {
   display_name?: string;
@@ -101,14 +102,15 @@ export class TessieClient {
   }
 
   async getVehicleState(vin: string, useCache: boolean = true): Promise<TessieVehicleState> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const response: AxiosResponse<TessieVehicleState> = await this.client.get(
         `/${vin}/state${useCache ? '?use_cache=true' : ''}`
       );
       return response.data;
-    } catch (error) {
-      throw new Error(`Failed to get vehicle state: ${error}`);
-    }
+    }, {
+      maxRetries: useCache ? 2 : 3, // Fewer retries when using cache
+      baseDelay: 1500
+    });
   }
 
   async getVehicleStates(
@@ -116,7 +118,7 @@ export class TessieClient {
     startDate?: string,
     endDate?: string
   ): Promise<TessieVehicleState[]> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('start', startDate);
       if (endDate) params.append('end', endDate);
@@ -125,18 +127,20 @@ export class TessieClient {
         `/${vin}/states?${params.toString()}`
       );
       return response.data;
-    } catch (error) {
-      throw new Error(`Failed to get vehicle states: ${error}`);
-    }
+    }, {
+      maxRetries: 2, // Historical data is less time-sensitive
+      baseDelay: 2000
+    });
   }
 
   async getVehicleLocation(vin: string): Promise<TessieLocation> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const response: AxiosResponse<TessieLocation> = await this.client.get(`/${vin}/location`);
       return response.data;
-    } catch (error) {
-      throw new Error(`Failed to get vehicle location: ${error}`);
-    }
+    }, {
+      maxRetries: 3,
+      baseDelay: 1000
+    });
   }
 
   async getDrives(
@@ -145,7 +149,7 @@ export class TessieClient {
     endDate?: string,
     limit: number = 50
   ): Promise<TessieDrive[]> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('start', startDate);
       if (endDate) params.append('end', endDate);
@@ -161,9 +165,10 @@ export class TessieClient {
       }
 
       return response.data as TessieDrive[];
-    } catch (error) {
-      throw new Error(`Failed to get drives: ${error}`);
-    }
+    }, {
+      maxRetries: 2, // Historical data requests
+      baseDelay: 2500
+    });
   }
 
   async getDrivingPath(
@@ -171,21 +176,22 @@ export class TessieClient {
     startDate: string,
     endDate: string
   ): Promise<Array<{ latitude: number; longitude: number; timestamp: string }>> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const params = new URLSearchParams();
       params.append('start', startDate);
       params.append('end', endDate);
 
-      const response: AxiosResponse<Array<{ latitude: number; longitude: number; timestamp: string }>> = 
+      const response: AxiosResponse<Array<{ latitude: number; longitude: number; timestamp: string }>> =
         await this.client.get(`/${vin}/path?${params.toString()}`);
       return response.data;
-    } catch (error) {
-      throw new Error(`Failed to get driving path: ${error}`);
-    }
+    }, {
+      maxRetries: 1, // Path data is large and less critical
+      baseDelay: 3000
+    });
   }
 
   async getVehicles(): Promise<Array<{ vin: string; display_name: string }>> {
-    try {
+    return ErrorHandler.withRetry(async () => {
       const response: AxiosResponse<{ results: any[] } | any[]> =
         await this.client.get('/vehicles');
 
@@ -202,8 +208,9 @@ export class TessieClient {
         vin: vehicle.vin,
         display_name: vehicle.last_state?.vehicle_state?.vehicle_name || vehicle.display_name || `Vehicle ${vehicle.vin.slice(-6)}`
       }));
-    } catch (error) {
-      throw new Error(`Failed to get vehicles: ${error}`);
-    }
+    }, {
+      maxRetries: 2, // Account list is fairly stable
+      baseDelay: 1500
+    });
   }
 }

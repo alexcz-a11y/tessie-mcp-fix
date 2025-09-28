@@ -9,6 +9,7 @@ import { TripCalculator } from './trip-calculator.js';
 import { CommuteAnalyzer } from './commute-analyzer.js';
 import { EfficiencyAnalyzer } from './efficiency-analyzer.js';
 import { ChargingReminderSystem } from './charging-reminder.js';
+import { ErrorHandler, EnhancedError } from './error-handler.js';
 import { GeocodingService } from './geocoding.js';
 
 // Configuration schema - automatically detected by Smithery
@@ -99,7 +100,13 @@ export default function createServer({
             last_updated: state.timestamp || new Date().toISOString(),
           };
         } catch (error) {
-          throw new Error(`Failed to get vehicle state: ${error}`);
+          const enhancedError = ErrorHandler.classifyError(error);
+
+          if (ErrorHandler.shouldDegrade(enhancedError)) {
+            return ErrorHandler.generateFallbackResponse(enhancedError, 'Vehicle state');
+          }
+
+          throw new Error(ErrorHandler.formatErrorForUser(enhancedError));
         }
       }
     );
@@ -930,7 +937,20 @@ export default function createServer({
             }))
           };
         } catch (error) {
-          throw new Error(`Failed to get vehicles: ${error}`);
+          const enhancedError = ErrorHandler.classifyError(error);
+
+          if (ErrorHandler.shouldDegrade(enhancedError)) {
+            return {
+              status: 'degraded',
+              error_type: enhancedError.type,
+              message: enhancedError.userFriendly,
+              suggestion: enhancedError.suggestion,
+              vehicles: [],
+              fallback_note: 'Vehicle list temporarily unavailable. Try again in a few moments.'
+            };
+          }
+
+          throw new Error(ErrorHandler.formatErrorForUser(enhancedError));
         }
       }
     );
