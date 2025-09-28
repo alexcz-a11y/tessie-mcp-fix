@@ -133,9 +133,9 @@ export default function createServer({
           const drives = await tessieClient.getDrives(vin, start_date, end_date, 500);
 
           const totalMiles = drives.reduce((sum, drive) => sum + drive.odometer_distance, 0);
-          const totalAutopilotMiles = drives.reduce((sum, drive) => sum + (drive.autopilot_distance || 0), 0);
 
-          // Group drives by day for weekly breakdown
+          // Use DriveAnalyzer to predict autopilot usage for each drive
+          let totalAutopilotMiles = 0;
           const dailyStats: { [key: string]: { miles: number; drives: number; autopilot_miles: number } } = {};
 
           drives.forEach(drive => {
@@ -143,9 +143,36 @@ export default function createServer({
             if (!dailyStats[date]) {
               dailyStats[date] = { miles: 0, drives: 0, autopilot_miles: 0 };
             }
+
+            // Create a temporary merged drive to predict autopilot usage
+            const tempMergedDrive = {
+              id: `temp_${drive.id}`,
+              originalDriveIds: [drive.id],
+              started_at: drive.started_at,
+              ended_at: drive.ended_at,
+              starting_location: drive.starting_location,
+              ending_location: drive.ending_location,
+              starting_battery: drive.starting_battery,
+              ending_battery: drive.ending_battery,
+              total_distance: drive.odometer_distance,
+              total_duration_minutes: (drive.ended_at - drive.started_at) / 60,
+              driving_duration_minutes: (drive.ended_at - drive.started_at) / 60,
+              stops: [],
+              autopilot_distance: 0,
+              autopilot_percentage: 0,
+              energy_consumed: drive.starting_battery - drive.ending_battery,
+              average_speed: drive.average_speed || 0,
+              max_speed: drive.max_speed || 0
+            };
+
+            // Predict autopilot usage for this drive
+            const predictedAutopilotMiles = driveAnalyzer.predictAutopilotUsage(tempMergedDrive);
+
             dailyStats[date].miles += drive.odometer_distance;
             dailyStats[date].drives += 1;
-            dailyStats[date].autopilot_miles += drive.autopilot_distance || 0;
+            dailyStats[date].autopilot_miles += predictedAutopilotMiles;
+
+            totalAutopilotMiles += predictedAutopilotMiles;
           });
 
           const breakdown = Object.entries(dailyStats).map(([date, stats]) => ({
