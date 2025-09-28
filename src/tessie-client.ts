@@ -1,36 +1,34 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 export interface TessieVehicleState {
-  display_name: string;
+  display_name?: string;
   vin: string;
-  state: string;
-  since: string;
-  healthy: boolean;
-  version: string;
-  update_available: boolean;
-  update_version: string;
-  latitude?: number;
-  longitude?: number;
-  shift_state?: string;
-  speed?: number;
-  power?: number;
-  odometer?: number;
-  est_battery_range?: number;
-  battery_level?: number;
-  usable_battery_level?: number;
-  charge_limit_soc?: number;
-  charging_state?: string;
-  time_to_full_charge?: number;
-  climate_on?: boolean;
-  inside_temp?: number;
-  outside_temp?: number;
-  is_preconditioning?: boolean;
-  locked?: boolean;
-  sentry_mode?: boolean;
-  windows_open?: boolean;
-  doors_open?: boolean;
-  trunk_open?: boolean;
-  frunk_open?: boolean;
+  state?: string;
+  timestamp?: number;
+  vehicle_state?: {
+    vehicle_name?: string;
+    locked?: boolean;
+    sentry_mode?: boolean;
+    odometer?: number;
+  };
+  charge_state?: {
+    battery_level?: number;
+    est_battery_range?: number;
+    charging_state?: string;
+    time_to_full_charge?: number;
+  };
+  climate_state?: {
+    inside_temp?: number;
+    outside_temp?: number;
+    is_climate_on?: boolean;
+  };
+  drive_state?: {
+    latitude?: number;
+    longitude?: number;
+    shift_state?: string;
+    speed?: number;
+    power?: number;
+  };
 }
 
 export interface TessieDrive {

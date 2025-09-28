@@ -47,29 +47,29 @@ export default function createServer({
         try {
           const state = await tessieClient.getVehicleState(vin, use_cache);
           return {
-            vehicle: state.display_name,
+            vehicle: state.display_name || state.vehicle_state?.vehicle_name || `Vehicle ${state.vin?.slice(-6)}`,
             vin: state.vin,
             current_location: {
-              latitude: state.latitude,
-              longitude: state.longitude,
+              latitude: state.drive_state?.latitude,
+              longitude: state.drive_state?.longitude,
             },
             battery: {
-              level: state.battery_level,
-              range: state.est_battery_range,
-              charging_state: state.charging_state,
-              time_to_full_charge: state.time_to_full_charge,
+              level: state.charge_state?.battery_level,
+              range: state.charge_state?.est_battery_range,
+              charging_state: state.charge_state?.charging_state,
+              time_to_full_charge: state.charge_state?.time_to_full_charge,
             },
             vehicle_state: {
-              locked: state.locked,
-              sentry_mode: state.sentry_mode,
-              odometer: state.odometer,
+              locked: state.vehicle_state?.locked,
+              sentry_mode: state.vehicle_state?.sentry_mode,
+              odometer: state.vehicle_state?.odometer,
             },
             climate: {
-              inside_temp: state.inside_temp,
-              outside_temp: state.outside_temp,
-              climate_on: state.climate_on,
+              inside_temp: state.climate_state?.inside_temp,
+              outside_temp: state.climate_state?.outside_temp,
+              climate_on: state.climate_state?.is_climate_on,
             },
-            last_updated: state.since,
+            last_updated: state.timestamp || new Date().toISOString(),
           };
         } catch (error) {
           throw new Error(`Failed to get vehicle state: ${error}`);
