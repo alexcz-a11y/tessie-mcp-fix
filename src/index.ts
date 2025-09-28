@@ -8,6 +8,7 @@ import { ChargingAnalyzer } from './charging-analyzer.js';
 import { TripCalculator } from './trip-calculator.js';
 import { CommuteAnalyzer } from './commute-analyzer.js';
 import { EfficiencyAnalyzer } from './efficiency-analyzer.js';
+import { ChargingReminderSystem } from './charging-reminder.js';
 import { GeocodingService } from './geocoding.js';
 
 // Configuration schema - automatically detected by Smithery
@@ -43,6 +44,7 @@ export default function createServer({
     const tripCalculator = new TripCalculator();
     const commuteAnalyzer = new CommuteAnalyzer();
     const efficiencyAnalyzer = new EfficiencyAnalyzer();
+    const chargingReminderSystem = new ChargingReminderSystem();
 
     // Register get_vehicle_current_state tool
     server.tool(
@@ -785,6 +787,129 @@ export default function createServer({
           };
         } catch (error) {
           throw new Error(`Failed to analyze efficiency trends: ${error}`);
+        }
+      }
+    );
+
+    // Register get_smart_charging_reminders tool
+    server.tool(
+      "get_smart_charging_reminders",
+      "Get intelligent charging reminders and optimization strategy based on current vehicle state, usage patterns, and conditions",
+      {
+        vin: z.string().describe("Vehicle identification number (VIN)"),
+        daily_miles: z.number().optional().default(40).describe("Average daily driving miles (default: 40)"),
+        next_trip_distance: z.number().optional().describe("Distance of upcoming trip in miles"),
+        weather_temp: z.number().optional().describe("Current or forecast temperature in Fahrenheit")
+      },
+      async ({ vin, daily_miles = 40, next_trip_distance, weather_temp }) => {
+        try {
+          // Get current vehicle state
+          const state = await tessieClient.getVehicleState(vin);
+
+          if (!state.battery_level) {
+            return {
+              error: "Unable to get battery information",
+              suggestion: "Make sure vehicle is awake and connected to Tessie"
+            };
+          }
+
+          // Generate smart charging strategy
+          const strategy = chargingReminderSystem.generateChargingStrategy(
+            state,
+            daily_miles,
+            next_trip_distance,
+            weather_temp
+          );
+
+          return {
+            vehicle_info: {
+              vin: vin,
+              timestamp: new Date().toISOString(),
+              location: state.latitude && state.longitude
+                ? await GeocodingService.reverseGeocode(state.latitude, state.longitude)
+                : 'Location unavailable'
+            },
+            charging_status: {
+              battery_level: `${strategy.current_status.battery_level}%`,
+              estimated_range: `${strategy.current_status.range_miles} miles`,
+              charging_state: strategy.current_status.charging_state,
+              plugged_in: strategy.current_status.plugged_in,
+              status_emoji: strategy.current_status.plugged_in ? '🔌' :
+                           strategy.current_status.battery_level < 20 ? '🔋' :
+                           strategy.current_status.battery_level > 80 ? '✅' : '⚡'
+            },
+            urgent_reminders: strategy.recommendations
+              .filter(r => r.priority === 'urgent' || r.priority === 'high')
+              .map(r => ({
+                priority: r.priority.toUpperCase(),
+                title: r.title,
+                message: r.message,
+                action_required: r.action_required,
+                deadline: r.deadline || 'None',
+                savings: r.estimated_savings || 'N/A',
+                emoji: r.priority === 'urgent' ? '🚨' : '⚠️'
+              })),
+            optimization_suggestions: strategy.recommendations
+              .filter(r => r.priority === 'medium' || r.priority === 'low')
+              .map(r => ({
+                category: r.type.replace('_', ' ').toUpperCase(),
+                title: r.title,
+                message: r.message,
+                potential_savings: r.estimated_savings || 'N/A',
+                time_sensitive: r.time_sensitive || false
+              })),
+            charging_schedule: {
+              optimal_timing: {
+                start: strategy.charging_schedule.optimal_start_time,
+                end: strategy.charging_schedule.optimal_end_time,
+                off_peak_window: strategy.charging_schedule.off_peak_window,
+                estimated_savings: `$${strategy.charging_schedule.estimated_cost_savings.toFixed(2)}`
+              },
+              current_recommendation: strategy.current_status.plugged_in
+                ? "Currently charging - monitor for completion"
+                : strategy.current_status.battery_level < 50
+                ? "🔌 Plug in tonight for off-peak charging"
+                : strategy.current_status.battery_level > 80
+                ? "✅ Well charged - no immediate action needed"
+                : "⚡ Consider charging if planning long trips"
+            },
+            range_analysis: {
+              comfort_level: strategy.range_analysis.comfort_range ? "Comfortable" : "Low",
+              emergency_status: strategy.range_analysis.emergency_range ? "CRITICAL" : "Safe",
+              recommended_charge_target: `${strategy.range_analysis.recommended_charge_level}%`,
+              next_charge_timing: strategy.range_analysis.next_charge_needed,
+              range_emoji: strategy.range_analysis.emergency_range ? '🚨' :
+                          strategy.range_analysis.comfort_range ? '✅' : '⚠️'
+            },
+            smart_insights: strategy.smart_insights.map(insight => ({
+              insight: insight,
+              category: insight.includes('💸') ? 'Cost Optimization' :
+                       insight.includes('🔋') ? 'Battery Health' :
+                       insight.includes('❄️') || insight.includes('🌡️') ? 'Weather Impact' :
+                       insight.includes('📅') ? 'Planning' : 'General'
+            })),
+            weather_considerations: weather_temp ? {
+              current_temp: `${weather_temp}°F`,
+              impact: weather_temp < 32 ? "❄️ Cold weather reduces range 20-30%" :
+                     weather_temp > 85 ? "🔥 Hot weather increases A/C usage 10-15%" :
+                     "🌤️ Mild weather - optimal efficiency conditions",
+              recommendation: weather_temp < 32 ? "Charge to 90% and precondition cabin" :
+                             weather_temp > 85 ? "Precondition cabin and consider shade parking" :
+                             "Standard charging routine is fine"
+            } : {
+              current_temp: "Not provided",
+              impact: "🌡️ Weather data not available",
+              recommendation: "Provide weather_temp parameter for weather-specific advice"
+            },
+            cost_optimization: {
+              peak_vs_offpeak: "Off-peak charging saves ~60-70% on electricity costs",
+              daily_cost_estimate: daily_miles ? `~$${(daily_miles * 0.04).toFixed(2)}/day at off-peak rates` : "Varies by usage",
+              monthly_savings_potential: `$${(strategy.charging_schedule.estimated_cost_savings * 15).toFixed(2)}/month with optimal timing`,
+              tip: "💡 Use Tesla app to schedule charging for 11 PM - 7 AM"
+            }
+          };
+        } catch (error) {
+          throw new Error(`Failed to get charging reminders: ${error}`);
         }
       }
     );
