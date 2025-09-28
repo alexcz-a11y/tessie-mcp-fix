@@ -4,13 +4,13 @@
 
 Transform your Tesla ownership experience with intelligent insights, cost optimization, and predictive analytics through the [Tessie API](https://tessie.com). From basic vehicle data to comprehensive financial analysis and commute optimization - this is the most advanced Tesla MCP server available.
 
-## 🆕 What's New in v1.1.1
+## 🆕 What's New in v1.2.0
 
-- **💰 Charging Cost Analyzer** - Track charging expenses by location with money-saving recommendations
-- **🧮 Trip Cost Calculator** - Calculate trip costs vs gas vehicles with environmental impact
-- **📍 Future Trip Planner** - Estimate costs and charging strategy for upcoming trips
-- **🛣️ Commute Pattern Detection** - Automatically identify regular routes with efficiency trends
-- **🤖 Predictive FSD Detection** - Estimate autopilot usage from driving patterns
+- **📊 Efficiency Trends Analysis** - Weekly/monthly/seasonal efficiency tracking with weather & speed impact
+- **🔌 Smart Charging Reminders** - Intelligent charging optimization with time-of-use cost savings
+- **🛡️ Enhanced Error Handling** - Robust retry logic with graceful degradation for vehicle sleep/offline states
+- **⚡ Improved FSD Detection** - Removed reliance on broken autopilot_distance API field
+- **🎯 Production Ready** - Comprehensive error classification with user-friendly messages
 
 ## ✨ Key Features
 
@@ -27,16 +27,28 @@ Transform your Tesla ownership experience with intelligent insights, cost optimi
 - **Future Trip Planning** - Cost estimates and charging strategy for upcoming trips
 
 ### 📊 Advanced Insights
+- **Efficiency Trends** - Weekly/monthly/seasonal efficiency analysis with confidence scoring
+- **Weather Impact Analysis** - Hot/cold weather penalties with optimization tips
+- **Speed Factor Analysis** - Highway vs city efficiency with optimal speed recommendations
+- **Smart Charging Reminders** - Priority-based alerts with cost savings calculations
+- **Time Pattern Detection** - Best/worst days and times for efficient driving
 - **Route Optimization** - "Your Santa Rosa commute efficiency is declining 📉"
-- **Time Pattern Analysis** - Morning vs evening commute efficiency
-- **Charging Strategy** - Optimal departure battery levels and Supercharger stops
-- **Weekly/Monthly Summaries** - Comprehensive ownership analytics
+- **Charging Strategy** - Optimal departure battery levels and time-of-use scheduling
+- **Weekly/Monthly Summaries** - Comprehensive ownership analytics with actionable insights
 
 ### 🚗 Complete Tesla Data Access
 - **Real-time Vehicle State** - Battery, location, climate, locks, speed
 - **Historical Driving Data** - Trips, mileage, efficiency, routes
 - **Charging Analytics** - Sessions, costs, locations, optimization
 - **Smart VIN Resolution** - Automatically detects your active vehicle
+
+### 🛡️ Production-Ready Reliability
+- **Intelligent Error Handling** - Automatic retry with exponential backoff
+- **Graceful Degradation** - Fallback responses when vehicle is asleep/offline
+- **Rate Limit Respect** - Smart handling of Tessie API limits with retry-after
+- **Network Resilience** - Robust handling of timeouts and connectivity issues
+- **User-Friendly Errors** - Clear explanations with actionable troubleshooting tips
+- **Context-Aware Responses** - Different retry strategies for real-time vs historical data
 
 ## Installation
 
@@ -95,6 +107,8 @@ The extension requires your Tessie API token to function. You can get your token
 ### 🧠 Intelligence & Analytics
 - **analyze_latest_drive** - Detailed analysis of recent drive with FSD prediction
 - **analyze_commute_patterns** - Detect regular routes with efficiency trends
+- **analyze_efficiency_trends** - Comprehensive efficiency analysis with weather/speed/time factors
+- **get_smart_charging_reminders** - Intelligent charging optimization with cost savings
 - **natural_language_query** - Process natural language queries about vehicle data
 
 ### 🔋 Battery & Charging
@@ -157,12 +171,30 @@ The extension requires your Tessie API token to function. You can get your token
 "What percentage of my highway driving was on FSD?"
 ```
 
-### 📊 Advanced Analytics
+### 📊 Advanced Analytics & Efficiency
 ```
-"Show me my driving efficiency trends"
+"Analyze my driving efficiency trends over the past 6 weeks"
+"Show me how weather affects my Tesla's efficiency"
+"Which days of the week am I most efficient?"
+"Compare my highway vs city driving efficiency"
+"What are my efficiency trends - improving or declining?"
+```
+
+### 🔌 Smart Charging & Optimization
+```
+"Give me smart charging reminders for tonight"
+"Should I charge now or wait for off-peak hours?"
+"What's my optimal charging schedule this week?"
+"How much can I save with better charging timing?"
+"Check if I need to charge before my 200-mile trip tomorrow"
+```
+
+### 📊 Comprehensive Analytics
+```
 "Give me a comprehensive monthly summary"
 "What are my most expensive charging locations?"
 "Compare this month's efficiency to last month"
+"Show me my driving patterns and optimization tips"
 ```
 
 Claude will automatically use the appropriate Tessie tools to get the information you need.
