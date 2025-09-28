@@ -1,6 +1,6 @@
 {
   "name": "tessie-mcp-server",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "MCP server for Tessie API vehicle data queries with drive analysis and natural language processing",
   "type": "module",
   "module": "./src/index.ts",
@@ -18,7 +18,8 @@
     "prepare": "npm run build:stdio",
     "dev": "smithery dev",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "release": "npm run build:all && echo 'Release v$(node -p \"require('./package.json').version\") built successfully'"
   },
   "keywords": [
     "mcp",

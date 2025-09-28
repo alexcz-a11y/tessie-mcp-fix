@@ -52,44 +52,44 @@ Transform your Tesla ownership experience with intelligent insights, cost optimi
 
 ## Installation
 
-### Installing via Smithery
+Choose your preferred installation method:
 
-To install tessie-mcp automatically via [Smithery](https://smithery.ai/server/@keithah/tessie-mcp):
+### Option 1: Via Smithery (Universal - Recommended)
+
+Install automatically via [Smithery](https://smithery.ai/server/@keithah/tessie-mcp):
 
 ```bash
 npx -y @smithery/cli install @keithah/tessie-mcp
 ```
 
-### Prerequisites
+This method works with any MCP-compatible client and handles updates automatically.
 
-- [Claude Desktop](https://claude.ai/download) v0.10.0 or later
-- A [Tessie](https://tessie.com) account with API access
-- Your Tessie API token from https://tessie.com
+### Option 2: MCPB Package (For MCP Clients)
 
-### Install the Extension
-
-1. Download the `tessie.mcpb` file from this repository
-2. Double-click the `.mcpb` file to install it in Claude Desktop
-3. Enable the extension in Claude Desktop settings
+1. Download the latest `tessie-mcp-v*.mcpb` file from the [GitHub releases page](https://github.com/keithah/tessie-mcp/releases)
+2. Double-click the `.mcpb` file to install it in your MCP client
+3. Enable the extension in your client settings
 4. Configure your Tessie API token when prompted
 
-### Upgrading
+### Prerequisites
 
-To upgrade to a newer version:
-
-1. Download the latest `tessie.mcpb` file from the [GitHub releases page](https://github.com/keithah/tessie-mcp/releases)
-2. Double-click the new `.mcpb` file - it will automatically replace the old version
-3. Restart Claude Desktop to ensure the new version loads
-
-No need to uninstall the old version first - the MCPB installer handles upgrades automatically.
+- **MCP-compatible client** (Claude Desktop v0.10.0+, or any MCP client)
+- **Tessie account** with API access from [tessie.com](https://tessie.com)
+- **Node.js** v18.0.0 or later (for local development)
 
 ### Configuration
 
-The extension requires your Tessie API token to function. You can get your token from:
+The server requires your Tessie API token to function:
+
 1. Log into your Tessie account at https://tessie.com
 2. Navigate to your API settings
 3. Copy your API token
-4. Enter it in the Claude Desktop extension configuration
+4. Configure it in your MCP client when prompted
+
+### Upgrading
+
+- **Smithery**: Run the install command again to upgrade
+- **MCPB**: Download and install the new `.mcpb` file (auto-replaces old version)
 
 ## 🛠️ Available Tools
 
@@ -197,11 +197,11 @@ The extension requires your Tessie API token to function. You can get your token
 "Show me my driving patterns and optimization tips"
 ```
 
-Claude will automatically use the appropriate Tessie tools to get the information you need.
+Your MCP client will automatically use the appropriate Tessie tools to get the information you need.
 
 ## Smart VIN Resolution
 
-The extension automatically handles vehicle identification:
+The server automatically handles vehicle identification:
 
 - **Single Active Vehicle**: If you have one active Tesla, it's used automatically
 - **Multiple Vehicles**: If you have multiple active vehicles, you'll be prompted to choose
@@ -213,7 +213,7 @@ The extension automatically handles vehicle identification:
 
 ### How It Works
 
-The extension analyzes driving patterns to estimate when Full Self-Driving might have been active:
+The server analyzes driving patterns to estimate when Full Self-Driving might have been active:
 
 - **Speed Consistency**: FSD maintains very consistent speeds, especially on highways
 - **Heading Smoothness**: FSD produces smooth, predictable steering patterns  
@@ -241,7 +241,7 @@ Use FSD detection results for personal analysis and insights, but don't rely on 
 
 ## API Coverage
 
-This extension implements all GET endpoints under "Vehicle Data" from the official [Tessie API documentation](https://developer.tessie.com/reference/about):
+This server implements all GET endpoints under "Vehicle Data" from the official [Tessie API documentation](https://developer.tessie.com/reference/about):
 
 - All vehicle information endpoints
 - Complete battery and charging data
@@ -253,24 +253,24 @@ This extension implements all GET endpoints under "Vehicle Data" from the offici
 
 ## Security
 
-- API tokens are stored securely in Claude Desktop's configuration
-- No hardcoded credentials in the extension code
+- API tokens are stored securely in your MCP client's configuration
+- No hardcoded credentials in the server code
 - All API communication uses HTTPS
 - Tokens are passed via environment variables
 
 ## Requirements
 
 - **Node.js**: v18.0.0 or later
-- **Claude Desktop**: v0.10.0 or later  
+- **MCP Client**: Any compatible client (Claude Desktop v0.10.0+, etc.)
 - **Platforms**: macOS, Windows, Linux
 - **Tessie Account**: Active subscription with API access
 
 ## Troubleshooting
 
-### Extension Not Running
-- Check that you've enabled the extension in Claude Desktop settings
+### Server Not Running
+- Check that you've enabled the server in your MCP client settings
 - Verify your Tessie API token is correctly configured
-- Try disabling and re-enabling the extension
+- Try disabling and re-enabling the server
 
 ### API Errors
 - Ensure your Tessie API token is valid and hasn't expired
@@ -284,10 +284,10 @@ This extension implements all GET endpoints under "Vehicle Data" from the offici
 
 ## Development
 
-The extension is built as a Node.js MCP (Model Context Protocol) server with:
+The server is built as a Node.js MCP (Model Context Protocol) server with:
 
 - **TessieClient**: Handles all API communication with Tessie
-- **TessieMCPServer**: Implements the MCP protocol for Claude Desktop
+- **TessieMCPServer**: Implements the MCP protocol for universal client compatibility
 - **Smart Error Handling**: Comprehensive error messages and fallbacks
 - **Zero Dependencies**: No external npm packages required
 
@@ -297,13 +297,13 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-For issues with the extension:
+For issues with the server:
 1. Check the troubleshooting section above
 2. Verify your Tessie account and API token
-3. Check Claude Desktop logs for detailed error messages
+3. Check your MCP client logs for detailed error messages
 
 For Tessie API questions, visit the [official Tessie documentation](https://developer.tessie.com/).
 
 ---
 
-**Note**: This extension requires a Tessie account and active API access. Tessie is a third-party service that provides enhanced Tesla vehicle data access. Visit [tessie.com](https://tessie.com) to learn more.
+**Note**: This server requires a Tessie account and active API access. Tessie is a third-party service that provides enhanced Tesla vehicle data access. Visit [tessie.com](https://tessie.com) to learn more.
