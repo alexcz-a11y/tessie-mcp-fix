@@ -7,6 +7,7 @@ import { DriveAnalyzer } from './drive-analyzer.js';
 import { ChargingAnalyzer } from './charging-analyzer.js';
 import { TripCalculator } from './trip-calculator.js';
 import { CommuteAnalyzer } from './commute-analyzer.js';
+import { GeocodingService } from './geocoding.js';
 
 // Configuration schema - automatically detected by Smithery
 export const configSchema = z.object({
@@ -52,10 +53,26 @@ export default function createServer({
       async ({ vin, use_cache = true }) => {
         try {
           const state = await tessieClient.getVehicleState(vin, use_cache);
+
+          // Get human-readable address from coordinates
+          let address = 'Location unavailable';
+          if (state.drive_state?.latitude && state.drive_state?.longitude) {
+            try {
+              address = await GeocodingService.reverseGeocode(
+                state.drive_state.latitude,
+                state.drive_state.longitude
+              );
+            } catch (error) {
+              console.warn('Geocoding failed:', error);
+              address = `${state.drive_state.latitude.toFixed(4)}, ${state.drive_state.longitude.toFixed(4)}`;
+            }
+          }
+
           return {
             vehicle: state.display_name || state.vehicle_state?.vehicle_name || `Vehicle ${state.vin?.slice(-6)}`,
             vin: state.vin,
             current_location: {
+              address: address,
               latitude: state.drive_state?.latitude,
               longitude: state.drive_state?.longitude,
             },

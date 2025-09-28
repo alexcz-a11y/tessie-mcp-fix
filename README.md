@@ -1,18 +1,42 @@
-# Tessie MCP Extension for Claude Desktop
+# 🚗 Tessie MCP Server - Tesla Intelligence Platform
 
 [![smithery badge](https://smithery.ai/badge/@keithah/tessie-mcp)](https://smithery.ai/server/@keithah/tessie-mcp)
 
-An advanced Tesla analytics platform for Claude Desktop through the [Tessie API](https://tessie.com). This extension provides 39+ tools for comprehensive vehicle data access, advanced analytics, experimental FSD detection, and data export capabilities.
+Transform your Tesla ownership experience with intelligent insights, cost optimization, and predictive analytics through the [Tessie API](https://tessie.com). From basic vehicle data to comprehensive financial analysis and commute optimization - this is the most advanced Tesla MCP server available.
 
-## Features
+## 🆕 What's New in v1.1.1
 
-- **Complete Tesla Data Access**: All Tessie API GET endpoints for vehicle data
-- **Advanced Analytics**: Efficiency trends, cost analysis, usage patterns over time
-- **Enhanced State Access**: Detailed driving, climate, and vehicle state information  
-- **Smart VIN Resolution**: Automatically detects and uses your active vehicle
-- **39+ Tools Available**: Battery, charging, driving, location, weather, analytics, and more
-- **Real-time Data**: Access current vehicle status and historical data
-- **Secure**: API token stored securely in Claude Desktop configuration
+- **💰 Charging Cost Analyzer** - Track charging expenses by location with money-saving recommendations
+- **🧮 Trip Cost Calculator** - Calculate trip costs vs gas vehicles with environmental impact
+- **📍 Future Trip Planner** - Estimate costs and charging strategy for upcoming trips
+- **🛣️ Commute Pattern Detection** - Automatically identify regular routes with efficiency trends
+- **🤖 Predictive FSD Detection** - Estimate autopilot usage from driving patterns
+
+## ✨ Key Features
+
+### 💰 Financial Intelligence
+- **Smart Charging Cost Analysis** - Track home vs Supercharger vs public charging costs
+- **Trip Cost Optimization** - Calculate real trip costs with gas vehicle comparisons
+- **Money-Saving Recommendations** - "Shift to off-peak charging to save $45/month"
+- **Environmental Impact Tracking** - CO2 savings and tree-planting equivalents
+
+### 🧠 Predictive Analytics
+- **Commute Pattern Detection** - Auto-identify regular routes (home ↔ work)
+- **Efficiency Trend Analysis** - Track route performance over time
+- **FSD Usage Estimation** - Predict autopilot usage from driving patterns
+- **Future Trip Planning** - Cost estimates and charging strategy for upcoming trips
+
+### 📊 Advanced Insights
+- **Route Optimization** - "Your Santa Rosa commute efficiency is declining 📉"
+- **Time Pattern Analysis** - Morning vs evening commute efficiency
+- **Charging Strategy** - Optimal departure battery levels and Supercharger stops
+- **Weekly/Monthly Summaries** - Comprehensive ownership analytics
+
+### 🚗 Complete Tesla Data Access
+- **Real-time Vehicle State** - Battery, location, climate, locks, speed
+- **Historical Driving Data** - Trips, mileage, efficiency, routes
+- **Charging Analytics** - Sessions, costs, locations, optimization
+- **Smart VIN Resolution** - Automatically detects your active vehicle
 
 ## Installation
 
@@ -55,96 +79,91 @@ The extension requires your Tessie API token to function. You can get your token
 3. Copy your API token
 4. Enter it in the Claude Desktop extension configuration
 
-## Available Tools
+## 🛠️ Available Tools
 
-### Vehicle Information
-- **get_vehicles**: List all vehicles in your Tessie account
-- **get_vehicle_status**: Get comprehensive vehicle status
-- **get_vehicle_config**: Get vehicle configuration details
-- **get_gui_settings**: Get GUI settings and preferences
-- **get_mobile_enabled**: Check if mobile access is enabled
-- **get_nearby_charging_sites**: Find nearby charging locations
+### 🚗 Vehicle Information & Status
+- **get_vehicles** - List all vehicles in your Tessie account
+- **get_vehicle_current_state** - Get comprehensive vehicle status with location address
+- **get_driving_history** - Get driving history and trip data
+- **get_weekly_mileage** - Calculate total miles driven in a specific period
 
-### Battery & Charging
-- **get_battery_health**: Get battery health information (global endpoint)
-- **get_charge_state**: Get current charging state and battery level
-- **get_charging_history**: Get historical charging sessions
-- **get_charging_invoices**: Get charging cost invoices
+### 💰 Financial & Cost Analysis
+- **analyze_charging_costs** - Comprehensive charging cost analysis by location type
+- **calculate_trip_cost** - Calculate cost and environmental impact of completed trips
+- **estimate_future_trip** - Plan charging strategy and costs for upcoming trips
 
-### Location & Driving
-- **get_location**: Get current vehicle location
-- **get_driving_history**: Get driving history and trip data  
-- **get_mileage_at_location**: Get mileage data at specific locations
+### 🧠 Intelligence & Analytics
+- **analyze_latest_drive** - Detailed analysis of recent drive with FSD prediction
+- **analyze_commute_patterns** - Detect regular routes with efficiency trends
+- **natural_language_query** - Process natural language queries about vehicle data
 
-### Climate & Weather
-- **get_climate_state**: Get HVAC and climate control status
-- **get_weather**: Get weather conditions at vehicle location
+### 🔋 Battery & Charging
+- **Smart charging cost tracking** with home vs Supercharger vs public analysis
+- **Money-saving recommendations** based on usage patterns
+- **Time-of-use optimization** for peak/off-peak charging rates
 
-### Vehicle Details
-- **get_license_plate**: Get vehicle license plate information
-- **get_tire_pressure**: Get current tire pressure readings
-- **get_consumption**: Get energy consumption since last charge
-- **get_speed_limit**: Get current speed limit information
+### 📍 Location & Navigation
+- **Automatic address resolution** from GPS coordinates
+- **Route pattern recognition** for commute detection
+- **Distance and efficiency calculations** between locations
 
-### Alerts & Service
-- **get_latest_alert**: Get the most recent vehicle alert
-- **get_service_data**: Get vehicle service information
+### 🤖 Predictive FSD Detection
+- **Highway speed consistency analysis** for autopilot estimation
+- **Route-based FSD probability** using driving patterns
+- **Efficiency comparison** between predicted FSD and manual driving
 
-### Enhanced State Access
-- **get_drive_state**: Detailed driving state with speed, heading, GPS, active route
-- **get_climate_state**: Comprehensive HVAC, seat heaters, cabin temperature data
-- **get_detailed_vehicle_state**: Complete vehicle state - doors, windows, locks, odometer, software
-- **get_charge_state**: Advanced charging state with schedules and detailed metrics
-- **get_gui_settings**: User interface settings, units, time format, display preferences
+## 💬 Example Commands
 
-### Advanced Analytics & Insights
-- **get_efficiency_trends**: Analyze driving efficiency over time with daily breakdowns
-- **get_charging_cost_analysis**: Cost analysis by charging location (home/supercharger/public)
-- **get_usage_patterns**: Driving patterns by day of week and hour of day
-- **get_monthly_summary**: Comprehensive monthly driving and charging summary reports
+### 🚗 Vehicle Status & Location
+```
+"What's my Tesla's current battery level?"
+"Where is my car parked right now?"
+"Show me my vehicle status"
+"Is my Tesla locked?"
+"What's the climate temperature?"
+```
 
-### Experimental FSD Detection
-- **analyze_drive_fsd_probability**: Estimate FSD usage likelihood for individual drives
-- **get_fsd_usage_summary**: Period-based FSD usage estimation with confidence scores
-- **compare_fsd_manual_efficiency**: Compare efficiency between estimated FSD and manual driving
+### 💰 Cost Analysis & Optimization
+```
+"How much did I spend on charging last month?"
+"Analyze my charging costs by location"
+"Calculate the cost of my trip to Santa Rosa"
+"How much money am I saving vs a gas car?"
+"Show me my Supercharger vs home charging breakdown"
+```
 
-### Data Export Tools
-- **export_tax_mileage_report**: Generate tax-ready mileage reports with monthly breakdowns
-- **export_charging_cost_spreadsheet**: Detailed charging cost analysis in spreadsheet format
-- **export_fsd_detection_report**: Comprehensive FSD analysis with methodology and confidence scores
+### 🗺️ Trip Planning & Analysis
+```
+"Estimate the cost for a 300-mile trip with 65% battery"
+"Analyze my latest drive"
+"How efficient was my commute this week?"
+"Plan charging stops for my trip to Los Angeles"
+```
 
-## Usage Examples
+### 🛣️ Commute & Route Intelligence
+```
+"Detect my regular commute patterns"
+"Which of my routes is most efficient?"
+"Show me my weekly driving patterns"
+"How much do my commutes cost per week?"
+"Is my route efficiency improving or declining?"
+```
 
-### Basic Vehicle Information
-- "What's my Tesla's current battery level?"
-- "Show me my recent driving history"
-- "Where is my car located right now?"
-- "What's the weather like where my Tesla is parked?"
-- "What's my tire pressure?"
+### 🤖 FSD & Autopilot Analysis
+```
+"How much autopilot did I use this week?"
+"Analyze my FSD usage patterns"
+"Compare my manual vs autopilot efficiency"
+"What percentage of my highway driving was on FSD?"
+```
 
-### Advanced Analytics
-- "Show me my driving efficiency trends for the last 3 months"
-- "Analyze my charging costs by location type"
-- "What are my driving usage patterns by day of the week?"
-- "Give me a comprehensive summary for September 2024"
-- "How much am I spending on home charging vs supercharging?"
-
-### Detailed State Information
-- "Show me detailed climate control settings"
-- "What's my current driving state and speed?"
-- "Give me complete vehicle state including doors and windows"
-- "Show me advanced charging state with schedules"
-
-### FSD Detection & Analysis
-- "Analyze my recent drives for FSD usage probability" 
-- "What percentage of my driving might have been on FSD this month?"
-- "Compare my efficiency when using FSD vs manual driving"
-- "Generate a comprehensive FSD detection report"
-
-### Data Export
-- "Export my 2024 mileage data for tax purposes"
-- "Create a spreadsheet of all my charging costs this year"
-- "Generate a comprehensive FSD usage analysis report"
+### 📊 Advanced Analytics
+```
+"Show me my driving efficiency trends"
+"Give me a comprehensive monthly summary"
+"What are my most expensive charging locations?"
+"Compare this month's efficiency to last month"
+```
 
 Claude will automatically use the appropriate Tessie tools to get the information you need.
 
