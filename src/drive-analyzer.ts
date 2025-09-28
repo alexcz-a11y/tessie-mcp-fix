@@ -13,8 +13,6 @@ export interface MergedDrive {
   total_duration_minutes: number;
   driving_duration_minutes: number;
   stops: DriveStop[];
-  autopilot_distance: number;
-  autopilot_percentage: number;
   energy_consumed: number;
   average_speed: number;
   max_speed: number;
@@ -38,7 +36,6 @@ export interface DriveAnalysis {
   fsdAnalysis: {
     total_autopilot_miles: number;
     fsd_percentage: number;
-    autopilot_available: boolean;
     note?: string;
   };
   summary: string;
@@ -153,7 +150,6 @@ export class DriveAnalyzer {
       total_duration_minutes: Math.round(totalDuration * 100) / 100,
       driving_duration_minutes: Math.round(drivingDuration * 100) / 100,
       stops,
-      autopilot_distance: 0, // Will be predicted in analyzeFSDUsage
       autopilot_percentage: 0, // Will be predicted in analyzeFSDUsage
       energy_consumed: firstDrive.starting_battery - lastDrive.ending_battery,
       average_speed: Math.round(averageSpeed * 100) / 100,
@@ -162,10 +158,6 @@ export class DriveAnalyzer {
 
     // Predict autopilot usage for this merged drive
     const predictedAutopilotMiles = this.predictAutopilotUsage(mergedDrive);
-    mergedDrive.autopilot_distance = predictedAutopilotMiles;
-    mergedDrive.autopilot_percentage = totalDistance > 0
-      ? Math.round((predictedAutopilotMiles / totalDistance) * 10000) / 100
-      : 0;
 
     return mergedDrive;
   }
@@ -228,7 +220,6 @@ export class DriveAnalyzer {
     return {
       total_autopilot_miles: predictedAutopilotMiles,
       fsd_percentage: predictedPercentage,
-      autopilot_available: true,
       note: predictedAutopilotMiles > 0
         ? "Estimated based on highway driving patterns and speed consistency"
         : "Low probability of FSD usage detected from driving patterns"
@@ -240,41 +231,68 @@ export class DriveAnalyzer {
    * Factors: highway speeds, long distance, speed consistency, duration
    */
   predictAutopilotUsage(drive: MergedDrive): number {
-    if (drive.total_distance < 5) {
+    if (drive.total_distance < 2) {
       // Very short drives unlikely to use autopilot
       return 0;
     }
 
     let autopilotLikelihood = 0;
 
-    // Factor 1: Highway speed indicator (speeds > 45 mph suggest highway driving)
-    if (drive.average_speed > 45) {
-      autopilotLikelihood += 0.4; // Strong indicator
-    } else if (drive.average_speed > 35) {
-      autopilotLikelihood += 0.2; // Moderate indicator
+    // Factor 1: Highway speed indicator (adjusted for real-world highway averages)
+    if (drive.average_speed > 35) {
+      autopilotLikelihood += 0.5; // Strong highway indicator
+    } else if (drive.average_speed > 25) {
+      autopilotLikelihood += 0.3; // Moderate highway/arterial indicator
+    } else if (drive.average_speed > 15) {
+      autopilotLikelihood += 0.1; // Light highway segments
     }
 
-    // Factor 2: Distance-based likelihood (longer drives more likely to use autopilot)
-    if (drive.total_distance > 30) {
-      autopilotLikelihood += 0.3; // Long highway drives
-    } else if (drive.total_distance > 15) {
-      autopilotLikelihood += 0.2; // Medium distance drives
-    } else if (drive.total_distance > 10) {
-      autopilotLikelihood += 0.1; // Short highway segments
+    // Factor 2: Distance-based likelihood (more realistic for FSD usage patterns)
+    if (drive.total_distance > 15) {
+      autopilotLikelihood += 0.4; // Long drives - very likely FSD
+    } else if (drive.total_distance > 8) {
+      autopilotLikelihood += 0.3; // Medium drives - likely FSD
+    } else if (drive.total_distance > 4) {
+      autopilotLikelihood += 0.2; // Short highway segments
     }
 
-    // Factor 3: Speed consistency (autopilot tends to maintain steady speeds)
+    // Factor 3: Max speed indicator (shows highway capability)
+    if (drive.max_speed > 65) {
+      autopilotLikelihood += 0.2; // Highway speeds
+    } else if (drive.max_speed > 45) {
+      autopilotLikelihood += 0.1; // Arterial speeds
+    }
+
+    // Factor 4: Speed consistency (autopilot tends to maintain steady speeds)
     const speedConsistency = this.calculateSpeedConsistency(drive);
-    autopilotLikelihood += speedConsistency * 0.2;
+    autopilotLikelihood += speedConsistency * 0.15;
 
-    // Factor 4: Duration factor (longer drives on highways more likely to use autopilot)
-    const avgDrivingSpeed = drive.total_distance / (drive.driving_duration_minutes / 60);
-    if (avgDrivingSpeed > 50 && drive.driving_duration_minutes > 30) {
-      autopilotLikelihood += 0.1; // Extended highway driving
+    // Factor 5: Duration factor (longer drives more likely to use autopilot)
+    if (drive.driving_duration_minutes > 20) {
+      autopilotLikelihood += 0.15; // Extended driving
+    } else if (drive.driving_duration_minutes > 10) {
+      autopilotLikelihood += 0.1; // Medium duration
     }
 
-    // Cap likelihood at 1.0 and apply to distance
-    autopilotLikelihood = Math.min(autopilotLikelihood, 0.9); // Max 90% of drive
+    // Cap likelihood and apply more realistic highway assumptions
+    autopilotLikelihood = Math.min(autopilotLikelihood, 1.0);
+
+    // Boost likelihood for clear highway patterns but keep realistic
+    if (drive.average_speed > 40 && drive.total_distance > 20) {
+      autopilotLikelihood = Math.max(autopilotLikelihood, 0.75); // Clear highway drive
+    } else if (drive.average_speed > 30 && drive.total_distance > 10) {
+      autopilotLikelihood = Math.max(autopilotLikelihood, 0.65); // Likely highway drive
+    }
+
+    // Apply realistic deductions for non-FSD portions
+    if (drive.total_distance > 5) {
+      // Deduct estimated parking/city driving at start and end (~1-2 miles total)
+      const parkingDeduction = Math.min(2.0 / drive.total_distance, 0.15);
+      autopilotLikelihood = Math.max(0, autopilotLikelihood - parkingDeduction);
+    }
+
+    // Cap maximum realistic FSD usage (even perfect highway drives have some manual portions)
+    autopilotLikelihood = Math.min(autopilotLikelihood, 0.92); // Max 92% FSD usage
 
     // Calculate estimated autopilot miles
     const estimatedAutopilotMiles = drive.total_distance * autopilotLikelihood;
@@ -303,7 +321,7 @@ export class DriveAnalyzer {
   private generateDriveSummary(
     drive: MergedDrive,
     battery: { percentage_used: number; estimated_kwh_used: number; efficiency_miles_per_kwh?: number },
-    fsd: { total_autopilot_miles: number; fsd_percentage: number; autopilot_available: boolean; note?: string }
+    fsd: { total_autopilot_miles: number; fsd_percentage: number; note?: string }
   ): string {
     const duration = drive.total_duration_minutes;
     const drivingTime = drive.driving_duration_minutes;
@@ -332,7 +350,7 @@ export class DriveAnalyzer {
       summary += `• Efficiency: ${battery.efficiency_miles_per_kwh} mi/kWh\n`;
     }
 
-    if (fsd.autopilot_available && fsd.total_autopilot_miles > 0) {
+    if (fsd.total_autopilot_miles > 0) {
       summary += `• FSD/Autopilot: ${fsd.total_autopilot_miles} miles (${fsd.fsd_percentage}% of drive)`;
     } else {
       summary += `• FSD/Autopilot: ${fsd.note || 'Data not available'}`;

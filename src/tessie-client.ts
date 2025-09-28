@@ -58,7 +58,6 @@ export interface TessieDrive {
   rated_range_used?: number;
   ideal_range_used?: number;
   odometer_distance: number;
-  autopilot_distance?: number;
   energy_used?: number;
   tag?: string;
 

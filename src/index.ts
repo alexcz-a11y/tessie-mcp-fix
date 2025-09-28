@@ -144,7 +144,6 @@ export default function createServer({
               battery_used: drive.starting_battery - drive.ending_battery,
               average_speed: drive.average_speed,
               max_speed: drive.max_speed,
-              autopilot_distance: 0, // Will be predicted
             }))
           };
         } catch (error) {
@@ -307,7 +306,7 @@ export default function createServer({
               fsd_analysis: {
                 autopilot_miles: analysis.fsdAnalysis.total_autopilot_miles,
                 fsd_percentage: `${analysis.fsdAnalysis.fsd_percentage}%`,
-                data_available: analysis.fsdAnalysis.autopilot_available,
+                data_available: true,
                 note: analysis.fsdAnalysis.note
               }
             },
