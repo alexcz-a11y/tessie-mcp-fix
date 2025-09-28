@@ -2,7 +2,7 @@
 
 [![smithery badge](https://smithery.ai/badge/@keithah/tessie-mcp)](https://smithery.ai/server/@keithah/tessie-mcp)
 
-Transform your Tesla ownership experience with intelligent insights, cost optimization, and predictive analytics through the [Tessie API](https://tessie.com). From basic vehicle data to comprehensive financial analysis and commute optimization - this is the most advanced Tesla MCP server available.
+🚗 **The most advanced Tesla MCP server available** - Transform your Tesla ownership with intelligent analytics, cost optimization, and predictive insights through the [Tessie API](https://tessie.com). From smart charging reminders to efficiency trends analysis, get the intelligence you need to optimize every aspect of your Tesla experience.
 
 ## 🆕 What's New in v1.2.0
 
