@@ -133,7 +133,7 @@ export default function createServer({
               battery_used: drive.starting_battery - drive.ending_battery,
               average_speed: drive.average_speed,
               max_speed: drive.max_speed,
-              autopilot_distance: drive.autopilot_distance || 0,
+              autopilot_distance: 0, // Will be predicted
             }))
           };
         } catch (error) {
@@ -181,7 +181,7 @@ export default function createServer({
               total_duration_minutes: (drive.ended_at - drive.started_at) / 60,
               driving_duration_minutes: (drive.ended_at - drive.started_at) / 60,
               stops: [],
-              autopilot_distance: 0,
+              autopilot_distance: 0, // Will be predicted below
               autopilot_percentage: 0,
               energy_consumed: drive.starting_battery - drive.ending_battery,
               average_speed: drive.average_speed || 0,
