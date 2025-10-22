@@ -286,9 +286,10 @@ export class ErrorHandler {
 
   /**
    * Generate fallback response for degraded scenarios
+   * Returns MCP-compliant format with content array
    */
   static generateFallbackResponse(error: EnhancedError, context: string): any {
-    return {
+    const fallbackData = {
       status: 'degraded',
       error_type: error.type,
       message: error.userFriendly,
@@ -299,6 +300,16 @@ export class ErrorHandler {
         timestamp: new Date().toISOString(),
         note: 'This is a fallback response due to service unavailability'
       }
+    };
+
+    // Wrap in MCP-compliant content array format
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(fallbackData, null, 2)
+        }
+      ]
     };
   }
 }

@@ -2,6 +2,26 @@
 
 All notable changes to the Tessie MCP Extension will be documented in this file.
 
+## [v1.2.2] - 2025-10-22
+
+### Fixed
+- **MCP Protocol Compliance**: All tool responses now follow the MCP specification with proper `content` array format
+- **Strict Client Compatibility**: Fixed compatibility issues with strict MCP clients (Kiro, Cursor, Windsurf, VSCode)
+- **Response Format**: All 12 tools now return responses wrapped in `content: [{ type: "text", text: "..." }]` structure
+- **Error Handling**: Error responses now follow MCP protocol format for consistent client parsing
+
+### Technical Details
+- Updated all tool handlers to return MCP-compliant response format
+- Modified ErrorHandler to generate MCP-compliant fallback responses
+- Preserved all existing data structures within the JSON text field
+- Maintained backward compatibility with lenient clients (CherryStudio)
+
+### Impact
+- Resolves "content missing" errors in strict MCP clients
+- No breaking changes to tool parameters or functionality
+- All vehicle data and analytics remain fully accessible
+- Consistent response formatting across all tools
+
 ## [v0.1.9] - 2025-09-12
 
 ### Added

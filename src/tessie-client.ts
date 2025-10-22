@@ -6,6 +6,8 @@ export interface TessieVehicleState {
   vin: string;
   state?: string;
   timestamp?: number;
+  
+  // Nested structure (Tesla API format)
   vehicle_state?: {
     vehicle_name?: string;
     locked?: boolean;
@@ -30,6 +32,21 @@ export interface TessieVehicleState {
     speed?: number;
     power?: number;
   };
+  
+  // Flat properties (Tessie API actual response format)
+  // These are added to match the actual API behavior
+  battery_level?: number;
+  battery_range?: number;
+  charging_state?: string;
+  time_to_full_charge?: number;
+  latitude?: number;
+  longitude?: number;
+  locked?: boolean;
+  sentry_mode?: boolean;
+  odometer?: number;
+  inside_temp?: number;
+  outside_temp?: number;
+  is_climate_on?: boolean;
 }
 
 export interface TessieDrive {

@@ -1,7 +1,7 @@
 {
   "name": "tessie-mcp-server",
-  "version": "1.2.1",
-  "description": "🚗 Advanced Tesla MCP Server - Intelligent analytics, cost optimization, and predictive insights through Tessie API",
+  "version": "1.2.2",
+  "description": "🚗 Advanced Tesla MCP Server - MCP protocol compliant with intelligent analytics, cost optimization, and predictive insights through Tessie API",
   "type": "module",
   "module": "./src/index.ts",
   "bin": {
