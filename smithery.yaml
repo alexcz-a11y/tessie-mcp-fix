@@ -1,1 +1,5 @@
 runtime: typescript
+
+# Test configuration for Smithery tool scanning
+env:
+  TESSIE_API_KEY: "AXQADdJmXb3OQNT6hup4sRTkXRgbELFD"
