@@ -1,4 +1,14 @@
 node_modules/
 .env
+.env.local
 *.log
 .DS_Store
+
+# API Keys and Secrets
+*.key
+*-config.json
+windsurf-mcp-config.json
+test-tire-pressure.js
+
+# Personal configs
+mcp.json

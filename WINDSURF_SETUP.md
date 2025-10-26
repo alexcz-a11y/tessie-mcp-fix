@@ -36,8 +36,8 @@ nano ~/.codeium/windsurf/mcp_config.json
     "tessie-mcp-fixed": {
       "command": "node",
       "args": [
-        "/Users/alexnear/Documents/tessie-mcp/tessiemcp-fix/tessie-mcp-fix/.smithery/stdio/index.cjs",
-        "apiKey=PL3jMQCGMk02SIHziqwpegeZj3YWEsD6"
+        "/path/to/tessie-mcp-fix/.smithery/stdio/index.cjs",
+        "apiKey=YOUR_TESSIE_API_TOKEN_HERE"
       ],
       "env": {}
     },
@@ -47,7 +47,7 @@ nano ~/.codeium/windsurf/mcp_config.json
         "mcp-remote",
         "https://mcp.jina.ai/sse",
         "--header",
-        "Authorization: Bearer jina_6392e539f48d4c4f9fbfe43f5c6dd9f9wYdm5RDgvKSCxwn05nnurzUGwKN9"
+        "Authorization: Bearer YOUR_JINA_API_KEY_HERE"
       ],
       "env": {}
     }
@@ -165,7 +165,7 @@ nano ~/.codeium/windsurf/mcp_config.json
 2. 确认 Node.js 已安装：`node --version`
 3. 验证 Tessie MCP 构建文件存在：
    ```bash
-   ls -la /Users/alexnear/Documents/tessie-mcp/tessiemcp-fix/tessie-mcp-fix/.smithery/stdio/index.cjs
+   ls -la /path/to/tessie-mcp-fix/.smithery/stdio/index.cjs
    ```
 
 ### API Key 错误

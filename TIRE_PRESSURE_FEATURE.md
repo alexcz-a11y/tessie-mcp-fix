@@ -22,7 +22,7 @@
 **返回数据：**
 ```json
 {
-  "vehicle_vin": "LRWYGCEK8RC606925",
+  "vehicle_vin": "5YJSA1E14HF000000",
   "timestamp": "2025-10-26T...",
   "pressure_unit": "psi",
   "tire_pressures": {
