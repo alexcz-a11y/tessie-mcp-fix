@@ -16,6 +16,7 @@ import { GeocodingService } from './geocoding.js';
 export const configSchema = z.object({
   TESSIE_API_KEY: z.string()
     .min(1)
+    .optional()
     .describe("Your Tessie API token from https://my.tessie.com/settings/api"),
 });
 
@@ -24,8 +25,8 @@ export default function createServer({
 }: {
   config: z.infer<typeof configSchema>
 }) {
-  // Extract and validate API token from config
-  const apiToken = config.TESSIE_API_KEY;
+  // Extract API token from config or environment variable (for Smithery scanning)
+  const apiToken = config.TESSIE_API_KEY || process.env.TESSIE_API_KEY;
   
   // Validate API token
   if (!apiToken || apiToken.trim() === '') {
