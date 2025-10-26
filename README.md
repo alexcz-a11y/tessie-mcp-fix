@@ -1,5 +1,6 @@
 # 🚗 Tessie MCP Server - Tesla Intelligence Platform
 
+[![smithery badge](https://smithery.ai/badge/@alexcz-a11y/tessie-mcp-fixx)](https://smithery.ai/server/@alexcz-a11y/tessie-mcp-fixx)
 [![smithery badge](https://smithery.ai/badge/@keithah/tessie-mcp)](https://smithery.ai/server/@keithah/tessie-mcp)
 
 🚗 **The most advanced Tesla MCP server available** - Transform your Tesla ownership with intelligent analytics, cost optimization, and predictive insights through the [Tessie API](https://tessie.com). From smart charging reminders to efficiency trends analysis, get the intelligence you need to optimize every aspect of your Tesla experience.
@@ -71,6 +72,14 @@ npx -y @smithery/cli install @keithah/tessie-mcp
 - ✅ One-command installation and setup
 
 **After installation**, you'll be prompted to configure your Tessie API token. See the [Configuration](#configuration) section below for details.
+
+### Installing via Smithery
+
+To install Tessie Insights automatically via [Smithery](https://smithery.ai/server/@alexcz-a11y/tessie-mcp-fixx):
+
+```bash
+npx -y @smithery/cli install @alexcz-a11y/tessie-mcp-fixx
+```
 
 ### Option 2: Manual HTTPS Configuration (Remote Access)
 
