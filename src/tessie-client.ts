@@ -101,6 +101,18 @@ export interface TessieLocation {
   saved_location?: string;
 }
 
+export interface TessieTirePressure {
+  front_left: number;
+  front_right: number;
+  rear_left: number;
+  rear_right: number;
+  front_left_status: 'unknown' | 'low' | 'normal';
+  front_right_status: 'unknown' | 'low' | 'normal';
+  rear_left_status: 'unknown' | 'low' | 'normal';
+  rear_right_status: 'unknown' | 'low' | 'normal';
+  timestamp: number;
+}
+
 export class TessieClient {
   private client: AxiosInstance;
   private accessToken: string;
@@ -226,6 +238,28 @@ export class TessieClient {
       }));
     }, {
       maxRetries: 2, // Account list is fairly stable
+      baseDelay: 1500
+    });
+  }
+
+  async getTirePressure(
+    vin: string,
+    pressureFormat: 'bar' | 'kpa' | 'psi' = 'psi',
+    from?: number,
+    to?: number
+  ): Promise<TessieTirePressure> {
+    return ErrorHandler.withRetry(async () => {
+      const params = new URLSearchParams();
+      params.append('pressure_format', pressureFormat);
+      if (from) params.append('from', from.toString());
+      if (to) params.append('to', to.toString());
+
+      const response: AxiosResponse<TessieTirePressure> = await this.client.get(
+        `/${vin}/tire_pressure?${params.toString()}`
+      );
+      return response.data;
+    }, {
+      maxRetries: 2,
       baseDelay: 1500
     });
   }

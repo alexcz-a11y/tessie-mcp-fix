@@ -54,7 +54,7 @@
 
 Choose your preferred installation method:
 
-### Option 1: Via Smithery (Universal - Recommended)
+### Option 1: Via Smithery (Universal - Recommended) 🌐
 
 Install automatically via [Smithery](https://smithery.ai/server/@keithah/tessie-mcp):
 
@@ -62,9 +62,46 @@ Install automatically via [Smithery](https://smithery.ai/server/@keithah/tessie-
 npx -y @smithery/cli install @keithah/tessie-mcp
 ```
 
-This method works with any MCP-compatible client and handles updates automatically.
+**Benefits of Smithery Installation:**
+- ✅ Works with any MCP-compatible client (Claude Desktop, Kiro, Cursor, Windsurf, etc.)
+- ✅ Automatic updates when new versions are released
+- ✅ HTTPS remote access - no local installation required
+- ✅ Secure configuration management
+- ✅ Cross-device configuration sync
+- ✅ One-command installation and setup
 
-### Option 2: MCPB Package (For MCP Clients)
+**After installation**, you'll be prompted to configure your Tessie API token. See the [Configuration](#configuration) section below for details.
+
+### Option 2: Manual HTTPS Configuration (Remote Access)
+
+For direct HTTPS access without the Smithery CLI, add to your MCP client configuration:
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "tessie": {
+      "url": "https://server.smithery.ai/@keithah/tessie-mcp/mcp"
+    }
+  }
+}
+```
+
+**Kiro** (`.kiro/settings/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "tessie": {
+      "command": "npx",
+      "args": ["-y", "@smithery/cli", "run", "@keithah/tessie-mcp"]
+    }
+  }
+}
+```
+
+**Other MCP Clients**: Consult your client's documentation for adding remote MCP servers via HTTPS.
+
+### Option 3: MCPB Package (For MCP Clients)
 
 1. Download the latest `tessie-mcp-v*.mcpb` file from the [GitHub releases page](https://github.com/keithah/tessie-mcp/releases)
 2. Double-click the `.mcpb` file to install it in your MCP client
@@ -73,23 +110,145 @@ This method works with any MCP-compatible client and handles updates automatical
 
 ### Prerequisites
 
-- **MCP-compatible client** (Claude Desktop v0.10.0+, or any MCP client)
+- **MCP-compatible client** (Claude Desktop v0.10.0+, Kiro, Cursor, Windsurf, or any MCP client)
 - **Tessie account** with API access from [tessie.com](https://tessie.com)
-- **Node.js** v18.0.0 or later (for local development)
+- **Node.js** v18.0.0 or later (only for local development, not required for Smithery installation)
 
-### Configuration
+## Configuration
 
-The server requires your Tessie API token to function:
+### Getting Your Tessie API Token
 
-1. Log into your Tessie account at https://tessie.com
-2. Navigate to your API settings
-3. Copy your API token
-4. Configure it in your MCP client when prompted
+The server requires your Tessie API token to access your Tesla vehicle data:
+
+1. **Log into Tessie**: Visit https://my.tessie.com and sign in
+2. **Navigate to API Settings**: Go to Settings → API (or visit https://my.tessie.com/settings/api directly)
+3. **Copy Your Token**: Your API token will be displayed on this page
+4. **Keep It Secret**: Treat this token like a password - it provides full access to your vehicle data
+
+### Configuring the Token
+
+**For Smithery Installation:**
+When you first connect to the server, your MCP client will prompt you to enter the `TESSIE_API_KEY`. Simply paste your token from the steps above.
+
+**For Manual Configuration:**
+Add the token to your MCP client's configuration file:
+
+```json
+{
+  "mcpServers": {
+    "tessie": {
+      "url": "https://server.smithery.ai/@keithah/tessie-mcp/mcp",
+      "env": {
+        "TESSIE_API_KEY": "your-tessie-api-token-here"
+      }
+    }
+  }
+}
+```
+
+**For Local Development:**
+Create a `.env` file in the project root:
+
+```bash
+TESSIE_API_KEY=your-tessie-api-token-here
+```
+
+### Verifying Configuration
+
+After configuration, test the connection by asking your MCP client:
+- "What's my Tesla's current battery level?"
+- "Show me my vehicle status"
+
+If you see vehicle data, you're all set! If you get an authentication error, double-check your API token.
 
 ### Upgrading
 
-- **Smithery**: Run the install command again to upgrade
-- **MCPB**: Download and install the new `.mcpb` file (auto-replaces old version)
+- **Smithery**: Run the install command again to upgrade to the latest version
+- **MCPB**: Download and install the new `.mcpb` file (automatically replaces the old version)
+- **Manual HTTPS**: No action needed - Smithery automatically serves the latest version
+
+## 🌐 Using HTTPS Remote Access
+
+One of the key benefits of Smithery deployment is HTTPS remote access - your MCP server runs in the cloud, so you don't need Node.js or any local installation.
+
+### How It Works
+
+```
+Your MCP Client (Claude, Kiro, etc.)
+         ↓ HTTPS
+Smithery Cloud Infrastructure
+         ↓ API Calls
+Tessie API → Your Tesla
+```
+
+### Benefits
+
+**No Local Installation Required:**
+- No Node.js installation needed on your machine
+- No package management or dependency issues
+- Works on any device with an MCP-compatible client
+
+**Always Up-to-Date:**
+- Automatic updates when new versions are released
+- No manual upgrade process required
+- Always running the latest stable version
+
+**Cross-Device Sync:**
+- Configure once, use everywhere
+- Same API token works across all your devices
+- Consistent experience on desktop, laptop, etc.
+
+**Reliable & Scalable:**
+- Hosted on Smithery's infrastructure with high availability
+- Automatic scaling during high usage
+- Professional monitoring and maintenance
+
+### Example Usage Scenarios
+
+**Scenario 1: Quick Setup on a New Device**
+```bash
+# On your new laptop - just one command!
+npx -y @smithery/cli install @keithah/tessie-mcp
+
+# Enter your TESSIE_API_KEY when prompted
+# Start using immediately - no build, no dependencies
+```
+
+**Scenario 2: Multiple MCP Clients**
+```json
+// Use the same server in Claude Desktop
+{
+  "mcpServers": {
+    "tessie": {
+      "url": "https://server.smithery.ai/@keithah/tessie-mcp/mcp"
+    }
+  }
+}
+
+// And in Kiro
+{
+  "mcpServers": {
+    "tessie": {
+      "command": "npx",
+      "args": ["-y", "@smithery/cli", "run", "@keithah/tessie-mcp"]
+    }
+  }
+}
+```
+
+**Scenario 3: Team Sharing**
+Each team member can install the same server with their own Tessie API token:
+```bash
+# Team member 1
+npx -y @smithery/cli install @keithah/tessie-mcp
+# Uses their own TESSIE_API_KEY
+
+# Team member 2
+npx -y @smithery/cli install @keithah/tessie-mcp
+# Uses their own TESSIE_API_KEY
+
+# Everyone gets the same features, isolated configurations
+```
 
 ## 🛠️ Available Tools
 
@@ -253,10 +412,26 @@ This server implements all GET endpoints under "Vehicle Data" from the official 
 
 ## Security
 
-- API tokens are stored securely in your MCP client's configuration
-- No hardcoded credentials in the server code
-- All API communication uses HTTPS
-- Tokens are passed via environment variables
+Your Tessie API token security is our top priority:
+
+**Smithery Deployment:**
+- 🔒 **Encrypted Storage**: API tokens are encrypted at rest in Smithery's secure database
+- 🔐 **Session Isolation**: Each user session is completely isolated - your configuration is never shared
+- 🌐 **HTTPS Transport**: All communication between your client and Smithery uses TLS encryption
+- 📝 **No Logging**: API tokens are never logged or exposed in error messages
+- 🔄 **Secure Updates**: Configuration updates are transmitted securely and validated
+
+**Local/Manual Configuration:**
+- 🔒 API tokens are stored securely in your MCP client's configuration files
+- 🚫 No hardcoded credentials in the server code
+- 🌐 All API communication with Tessie uses HTTPS
+- 📋 Tokens are passed via environment variables, never in URLs or logs
+
+**Best Practices:**
+- Never share your Tessie API token with anyone
+- Rotate your token periodically from https://my.tessie.com/settings/api
+- If you suspect your token is compromised, regenerate it immediately in Tessie
+- Use different tokens for different applications when possible
 
 ## Requirements
 

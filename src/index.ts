@@ -14,9 +14,9 @@ import { GeocodingService } from './geocoding.js';
 
 // Configuration schema - automatically detected by Smithery
 export const configSchema = z.object({
-  apiKey: z.string().describe("Your API key"),
-  modelName: z.string().default("gpt-4").describe("Model to use"),
-  temperature: z.number().min(0).max(1).default(0.7).describe("Temperature setting"),
+  TESSIE_API_KEY: z.string()
+    .min(1)
+    .describe("Your Tessie API token from https://my.tessie.com/settings/api"),
 });
 
 export default function createServer({
@@ -24,18 +24,31 @@ export default function createServer({
 }: {
   config: z.infer<typeof configSchema>
 }) {
+  // Extract and validate API token from config
+  const apiToken = config.TESSIE_API_KEY;
+  
+  // Validate API token
+  if (!apiToken || apiToken.trim() === '') {
+    throw new Error(
+      'TESSIE_API_KEY is required. ' +
+      'Get your API token from https://my.tessie.com/settings/api'
+    );
+  }
+  
+  // Additional validation for API key format
+  if (apiToken.length < 10) {
+    throw new Error(
+      'TESSIE_API_KEY appears to be invalid. ' +
+      'Please check your API token at https://my.tessie.com/settings/api'
+    );
+  }
+
   // Create MCP server
   const server = new McpServer({
     name: "tessie-mcp-server",
     title: "Tessie Vehicle Data",
     version: "1.1.1"
   });
-
-  // Use config values in your tools
-  console.log(`Using model: ${config.modelName}`);
-
-  // Initialize clients
-  const apiToken = config.apiKey;
 
   // Create clients with provided API token
   const tessieClient = new TessieClient(apiToken);
@@ -1197,6 +1210,123 @@ export default function createServer({
               }
             ]
           };
+        }
+
+        throw new Error(ErrorHandler.formatErrorForUser(enhancedError));
+      }
+    }
+  );
+
+  // Register get_tire_pressure tool
+  server.tool(
+    "get_tire_pressure",
+    "Get current tire pressure readings for all four tires with status indicators",
+    {
+      vin: z.string().describe("Vehicle identification number (VIN)"),
+      pressure_format: z.enum(['bar', 'kpa', 'psi']).optional().default('psi').describe("Pressure unit (default: psi)"),
+      from: z.number().optional().describe("Start timestamp for historical data (Unix timestamp in seconds)"),
+      to: z.number().optional().describe("End timestamp for historical data (Unix timestamp in seconds)")
+    },
+    async ({ vin, pressure_format = 'psi', from, to }) => {
+      try {
+        const tirePressure = await tessieClient.getTirePressure(vin, pressure_format, from, to);
+
+        const result = {
+          vehicle_vin: vin,
+          timestamp: new Date(tirePressure.timestamp * 1000).toISOString(),
+          pressure_unit: pressure_format,
+          tire_pressures: {
+            front_left: {
+              pressure: tirePressure.front_left,
+              status: tirePressure.front_left_status,
+              emoji: tirePressure.front_left_status === 'low' ? '⚠️' : 
+                     tirePressure.front_left_status === 'normal' ? '✅' : '❓'
+            },
+            front_right: {
+              pressure: tirePressure.front_right,
+              status: tirePressure.front_right_status,
+              emoji: tirePressure.front_right_status === 'low' ? '⚠️' : 
+                     tirePressure.front_right_status === 'normal' ? '✅' : '❓'
+            },
+            rear_left: {
+              pressure: tirePressure.rear_left,
+              status: tirePressure.rear_left_status,
+              emoji: tirePressure.rear_left_status === 'low' ? '⚠️' : 
+                     tirePressure.rear_left_status === 'normal' ? '✅' : '❓'
+            },
+            rear_right: {
+              pressure: tirePressure.rear_right,
+              status: tirePressure.rear_right_status,
+              emoji: tirePressure.rear_right_status === 'low' ? '⚠️' : 
+                     tirePressure.rear_right_status === 'normal' ? '✅' : '❓'
+            }
+          },
+          overall_status: {
+            all_normal: [
+              tirePressure.front_left_status,
+              tirePressure.front_right_status,
+              tirePressure.rear_left_status,
+              tirePressure.rear_right_status
+            ].every(status => status === 'normal'),
+            low_pressure_count: [
+              tirePressure.front_left_status,
+              tirePressure.front_right_status,
+              tirePressure.rear_left_status,
+              tirePressure.rear_right_status
+            ].filter(status => status === 'low').length,
+            summary: [
+              tirePressure.front_left_status,
+              tirePressure.front_right_status,
+              tirePressure.rear_left_status,
+              tirePressure.rear_right_status
+            ].every(status => status === 'normal')
+              ? '✅ All tires are properly inflated'
+              : [
+                  tirePressure.front_left_status,
+                  tirePressure.front_right_status,
+                  tirePressure.rear_left_status,
+                  tirePressure.rear_right_status
+                ].filter(status => status === 'low').length > 0
+                ? `⚠️ ${[
+                    tirePressure.front_left_status,
+                    tirePressure.front_right_status,
+                    tirePressure.rear_left_status,
+                    tirePressure.rear_right_status
+                  ].filter(status => status === 'low').length} tire(s) with low pressure - inflate soon`
+                : '❓ Tire pressure status unknown - check vehicle display'
+          },
+          recommendations: [
+            tirePressure.front_left_status,
+            tirePressure.front_right_status,
+            tirePressure.rear_left_status,
+            tirePressure.rear_right_status
+          ].some(status => status === 'low')
+            ? [
+                '🔧 Inflate low pressure tires to recommended PSI (check door jamb sticker)',
+                '⚡ Proper tire pressure improves efficiency by 3-5%',
+                '🛡️ Correct pressure extends tire life and improves safety'
+              ]
+            : [
+                '✅ Tire pressures are good',
+                '📅 Check tire pressure monthly for optimal performance',
+                '🌡️ Remember: tire pressure drops ~1 PSI per 10°F temperature decrease'
+              ]
+        };
+
+        // Wrap in MCP format
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        const enhancedError = ErrorHandler.classifyError(error);
+
+        if (ErrorHandler.shouldDegrade(enhancedError)) {
+          return ErrorHandler.generateFallbackResponse(enhancedError, 'Tire pressure data');
         }
 
         throw new Error(ErrorHandler.formatErrorForUser(enhancedError));
